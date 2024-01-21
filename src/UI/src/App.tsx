@@ -1,26 +1,27 @@
-import React from 'react';
-import logo from './logo.svg';
+import React, { useEffect, useState } from 'react';
 import './App.scss';
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+const App = () => {
+    const [expenses, setExpenses] = useState<any[]>()
+    useEffect(() => {
+        fetch('/api/expenses')
+          .then(resp => {
+            console.log(resp);
+            console.log('======success=======');
+            return resp.json();
+          })
+          .then(setExpenses)
+          .catch(err => {
+            console.log('======failure=======');
+            console.log(err);
+          });
+      }, [])
+    return (
+        <>
+            <div>App</div>
+            <div>{expenses?.length.toString()}</div>
+        </>
+    )
 }
 
 export default App;
