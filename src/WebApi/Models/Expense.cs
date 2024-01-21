@@ -16,7 +16,7 @@ public class Expense {
     [StringLength(512)]
     public string? Note { get; set; }
 
-    public ExpenseCategory ExpenseCategory { get; set; }
-    public Vendor Vendor { get; set; }
-    public PaymentMethod PaymentMethod { get; set; }
+    public ExpenseCategory? ExpenseCategory { get; set; }
+    public Vendor? Vendor { get; set; }
+    public PaymentMethod? PaymentMethod { get; set; }
 }

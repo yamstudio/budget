@@ -15,6 +15,6 @@ public class Income {
     [StringLength(512)]
     public string? Note { get; set; }
 
-    public IncomeCategory IncomeCategory { get; set; }
-    public IncomeSource IncomeSource { get; set; }
+    public IncomeCategory? IncomeCategory { get; set; }
+    public IncomeSource? IncomeSource { get; set; }
 }

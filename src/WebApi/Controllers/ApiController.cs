@@ -5,7 +5,7 @@ using YamStudio.Budget.WebApi.Models;
 
 namespace YamStudio.Budget.WebApi.Controllers;
 
-[Route("api")]
+[Route("api", Name = "Budget API")]
 [ApiController]
 public class ApiController : ControllerBase
 {
@@ -16,45 +16,339 @@ public class ApiController : ControllerBase
         _context = context;
     }
 
-    [HttpGet("expenses")]
+    [HttpGet("expenses", Name = "Get Expenses")]
     public async Task<ICollection<Expense>> GetExpenses()
     {
-        return await _context.Expenses.ToListAsync();
+        return await _context.Expenses
+            .Include(e => e.ExpenseCategory)
+            .Include(e => e.Vendor)
+            .Include(e => e.PaymentMethod)
+            .ToListAsync();
     }
 
-    [HttpGet("expense-categories")]
+    [HttpPost("expenses", Name = "Create Expense")]
+    public async Task<Expense> CreateExpense(
+        [Bind(["ExpenseCategoryID", "VendorID", "PaymentMethodID", "Amount", "Date", "Note"])] Expense expense
+    )
+    {
+        _context.Add(expense);
+        await _context.SaveChangesAsync();
+        return expense;
+    }
+
+    [HttpPut("expenses/{expenseId}", Name = "Update Expense")]
+    public async Task<ActionResult<Expense>> UpdateExpense(
+        int expenseId,
+        [Bind(["ExpenseCategoryID", "VendorID", "PaymentMethodID", "Amount", "Date", "Note"])] Expense expense
+    )
+    {
+        var expenseToUpdate = await _context.Expenses.FirstOrDefaultAsync(e => e.ExpenseID == expenseId);
+        if (expenseToUpdate == null)
+        {
+            return NotFound();
+        }
+        expenseToUpdate.ExpenseCategoryID = expense.ExpenseCategoryID;
+        expenseToUpdate.VendorID = expense.VendorID;
+        expenseToUpdate.PaymentMethodID = expense.PaymentMethodID;
+        expenseToUpdate.Amount = expense.Amount;
+        expenseToUpdate.Date = expense.Date;
+        expenseToUpdate.Note = expense.Note;
+        await _context.SaveChangesAsync();
+        return expense;
+    }
+
+    [HttpDelete("expenses/{expenseId}", Name = "Delete Expense")]
+    public async Task<ActionResult<Expense>> DeleteExpense(int expenseId)
+    {
+        var expenseToDelete = await _context.Expenses.FirstOrDefaultAsync(e => e.ExpenseID == expenseId);
+        if (expenseToDelete == null)
+        {
+            return NotFound();
+        }
+        _context.Remove(expenseToDelete);
+        await _context.SaveChangesAsync();
+        return expenseToDelete;
+    }
+
+    [HttpGet("expense-categories", Name = "Get Expense Categories")]
     public async Task<ICollection<ExpenseCategory>> GetExpenseCategories()
     {
         return await _context.ExpenseCategories.ToListAsync();
     }
 
-    [HttpGet("incomes")]
-    public async Task<ICollection<Income>> GetIncomes()
+    [HttpPost("expense-categories", Name = "Create Expense Category")]
+    public async Task<ExpenseCategory> CreateExpenseCategory(
+        [Bind(["DisplayName", "Description"])] ExpenseCategory expenseCategory
+    )
     {
-        return await _context.Incomes.ToListAsync();
+        _context.Add(expenseCategory);
+        await _context.SaveChangesAsync();
+        return expenseCategory;
     }
 
-    [HttpGet("income-categories")]
+    [HttpPut("expense-categories/{expenseCategoryId}", Name = "Update Expense Category")]
+    public async Task<ActionResult<ExpenseCategory>> UpdateExpenseCategory(
+        int expenseCategoryId,
+        [Bind(["DisplayName", "Description"])] ExpenseCategory expenseCategory
+    )
+    {
+        var expenseCategoryToUpdate = await _context.ExpenseCategories.FirstOrDefaultAsync(e => e.ExpenseCategoryID == expenseCategoryId);
+        if (expenseCategoryToUpdate == null)
+        {
+            return NotFound();
+        }
+        expenseCategoryToUpdate.DisplayName = expenseCategory.DisplayName;
+        expenseCategoryToUpdate.Description = expenseCategory.Description;
+        await _context.SaveChangesAsync();
+        return expenseCategory;
+    }
+
+    [HttpDelete("expense-categories/{expenseCategoryId}", Name = "Delete Expense Category")]
+    public async Task<ActionResult<ExpenseCategory>> DeleteExpenseCategory(int expenseCategoryId)
+    {
+        var expenseCategoryToDelete = await _context.ExpenseCategories.FirstOrDefaultAsync(e => e.ExpenseCategoryID == expenseCategoryId);
+        if (expenseCategoryToDelete == null)
+        {
+            return NotFound();
+        }
+        _context.Remove(expenseCategoryToDelete);
+        await _context.SaveChangesAsync();
+        return expenseCategoryToDelete;
+    }
+
+    [HttpGet("incomes", Name = "Get Incomes")]
+    public async Task<ICollection<Income>> GetIncomes()
+    {
+        return await _context.Incomes
+            .Include(e => e.IncomeCategory)
+            .Include(e => e.IncomeSource)
+            .ToListAsync();
+    }
+
+    [HttpPost("incomes", Name = "Create Income")]
+    public async Task<Income> CreateIncome(
+        [Bind(["IncomeCategoryID", "IncomeSourceID", "Amount", "Date", "Note"])] Income income
+    )
+    {
+        _context.Add(income);
+        await _context.SaveChangesAsync();
+        return income;
+    }
+
+    [HttpPut("incomes/{incomeId}", Name = "Update Income")]
+    public async Task<ActionResult<Income>> UpdateIncome(
+        int incomeId,
+        [Bind(["IncomeCategoryID", "IncomeSourceID", "Amount", "Date", "Note"])] Income income
+    )
+    {
+        var incomeToUpdate = await _context.Incomes.FirstOrDefaultAsync(e => e.IncomeID == incomeId);
+        if (incomeToUpdate == null)
+        {
+            return NotFound();
+        }
+        incomeToUpdate.IncomeCategoryID = income.IncomeCategoryID;
+        incomeToUpdate.IncomeSourceID = income.IncomeSourceID;
+        incomeToUpdate.Amount = income.Amount;
+        incomeToUpdate.Date = income.Date;
+        incomeToUpdate.Note = income.Note;
+        await _context.SaveChangesAsync();
+        return income;
+    }
+
+    [HttpDelete("incomes/{incomeId}", Name = "Delete Income")]
+    public async Task<ActionResult<Income>> DeleteIncome(int incomeId)
+    {
+        var incomeToDelete = await _context.Incomes.FirstOrDefaultAsync(e => e.IncomeID == incomeId);
+        if (incomeToDelete == null)
+        {
+            return NotFound();
+        }
+        _context.Remove(incomeToDelete);
+        await _context.SaveChangesAsync();
+        return incomeToDelete;
+    }
+
+    [HttpGet("income-categories", Name = "Get Income Categories")]
     public async Task<ICollection<IncomeCategory>> GetIncomeCategories()
     {
         return await _context.IncomeCategories.ToListAsync();
     }
 
-    [HttpGet("income-sources")]
+    [HttpPost("income-categories", Name = "Create Income Category")]
+    public async Task<IncomeCategory> CreateIncomeCategory(
+        [Bind(["DisplayName", "Description"])] IncomeCategory incomeCategory
+    )
+    {
+        _context.Add(incomeCategory);
+        await _context.SaveChangesAsync();
+        return incomeCategory;
+    }
+
+    [HttpPut("income-categories/{incomeCategoryId}", Name = "Update Income Category")]
+    public async Task<ActionResult<IncomeCategory>> UpdateIncomeCategory(
+        int incomeCategoryId,
+        [Bind(["DisplayName", "Description"])] IncomeCategory incomeCategory
+    )
+    {
+        var incomeCategoryToUpdate = await _context.IncomeCategories.FirstOrDefaultAsync(e => e.IncomeCategoryID == incomeCategoryId);
+        if (incomeCategoryToUpdate == null)
+        {
+            return NotFound();
+        }
+        incomeCategoryToUpdate.DisplayName = incomeCategory.DisplayName;
+        incomeCategoryToUpdate.Description = incomeCategory.Description;
+        await _context.SaveChangesAsync();
+        return incomeCategory;
+    }
+
+    [HttpDelete("income-categories/{incomeCategoryId}", Name = "Delete Income Category")]
+    public async Task<ActionResult<IncomeCategory>> DeleteIncomeCategory(int incomeCategoryId)
+    {
+        var incomeCategoryToDelete = await _context.IncomeCategories.FirstOrDefaultAsync(e => e.IncomeCategoryID == incomeCategoryId);
+        if (incomeCategoryToDelete == null)
+        {
+            return NotFound();
+        }
+        _context.Remove(incomeCategoryToDelete);
+        await _context.SaveChangesAsync();
+        return incomeCategoryToDelete;
+    }
+
+    [HttpGet("income-sources", Name = "Get Income Sources")]
     public async Task<ICollection<IncomeSource>> GetIncomeSources()
     {
         return await _context.IncomeSources.ToListAsync();
     }
 
-    [HttpGet("payment-methods")]
+    [HttpPost("income-sources", Name = "Create Income Source")]
+    public async Task<IncomeSource> CreateIncomeSource(
+        [Bind(["DisplayName", "Description"])] IncomeSource incomeSource
+    )
+    {
+        _context.Add(incomeSource);
+        await _context.SaveChangesAsync();
+        return incomeSource;
+    }
+
+    [HttpPut("income-sources/{incomeSourceId}", Name = "Update Income Source")]
+    public async Task<ActionResult<IncomeSource>> UpdateIncomeSource(
+        int incomeSourceId,
+        [Bind(["DisplayName", "Description"])] IncomeSource incomeSource
+    )
+    {
+        var incomeSourceToUpdate = await _context.IncomeSources.FirstOrDefaultAsync(e => e.IncomeSourceID == incomeSourceId);
+        if (incomeSourceToUpdate == null)
+        {
+            return NotFound();
+        }
+        incomeSourceToUpdate.DisplayName = incomeSource.DisplayName;
+        incomeSourceToUpdate.Description = incomeSource.Description;
+        await _context.SaveChangesAsync();
+        return incomeSource;
+    }
+
+    [HttpDelete("income-sources/{incomeSourceId}", Name = "Delete Income Source")]
+    public async Task<ActionResult<IncomeSource>> DeleteIncomeSource(int incomeSourceId)
+    {
+        var incomeSourceToDelete = await _context.IncomeSources.FirstOrDefaultAsync(e => e.IncomeSourceID == incomeSourceId);
+        if (incomeSourceToDelete == null)
+        {
+            return NotFound();
+        }
+        _context.Remove(incomeSourceToDelete);
+        await _context.SaveChangesAsync();
+        return incomeSourceToDelete;
+    }
+
+    [HttpGet("payment-methods", Name = "Get Payment Methods")]
     public async Task<ICollection<PaymentMethod>> GetPaymentMethods()
     {
         return await _context.PaymentMethods.ToListAsync();
     }
 
-    [HttpGet("vendors")]
+    [HttpPost("payment-methods", Name = "Create Payment Method")]
+    public async Task<PaymentMethod> CreatePaymentMethod(
+        [Bind(["DisplayName", "Description"])] PaymentMethod paymentMethod
+    )
+    {
+        _context.Add(paymentMethod);
+        await _context.SaveChangesAsync();
+        return paymentMethod;
+    }
+
+    [HttpPut("payment-methods/{paymentMethodId}", Name = "Update Payment Method")]
+    public async Task<ActionResult<PaymentMethod>> UpdatePaymentMethod(
+        int paymentMethodId,
+        [Bind(["DisplayName", "Description"])] PaymentMethod paymentMethod
+    )
+    {
+        var paymentMethodToUpdate = await _context.PaymentMethods.FirstOrDefaultAsync(e => e.PaymentMethodID == paymentMethodId);
+        if (paymentMethodToUpdate == null)
+        {
+            return NotFound();
+        }
+        paymentMethodToUpdate.DisplayName = paymentMethod.DisplayName;
+        paymentMethodToUpdate.Description = paymentMethod.Description;
+        await _context.SaveChangesAsync();
+        return paymentMethod;
+    }
+
+    [HttpDelete("payment-methods/{paymentMethodId}", Name = "Delete Payment Method")]
+    public async Task<ActionResult<PaymentMethod>> DeletePaymentMethod(int paymentMethodId)
+    {
+        var paymentMethodToDelete = await _context.PaymentMethods.FirstOrDefaultAsync(e => e.PaymentMethodID == paymentMethodId);
+        if (paymentMethodToDelete == null)
+        {
+            return NotFound();
+        }
+        _context.Remove(paymentMethodToDelete);
+        await _context.SaveChangesAsync();
+        return paymentMethodToDelete;
+    }
+
+    [HttpGet("vendors", Name = "Get Vendors")]
     public async Task<ICollection<Vendor>> GetVendors()
     {
         return await _context.Vendors.ToListAsync();
+    }
+
+    [HttpPost("vendors", Name = "Create Vendor")]
+    public async Task<Vendor> CreateVendor(
+        [Bind(["DisplayName", "Description"])] Vendor vendor
+    )
+    {
+        _context.Add(vendor);
+        await _context.SaveChangesAsync();
+        return vendor;
+    }
+
+    [HttpPut("vendors/{vendorId}", Name = "Update Vendor")]
+    public async Task<ActionResult<Vendor>> UpdateVendor(
+        int vendorId,
+        [Bind(["DisplayName", "Description"])] Vendor vendor
+    )
+    {
+        var vendorToUpdate = await _context.Vendors.FirstOrDefaultAsync(e => e.VendorID == vendorId);
+        if (vendorToUpdate == null)
+        {
+            return NotFound();
+        }
+        vendorToUpdate.DisplayName = vendor.DisplayName;
+        vendorToUpdate.Description = vendor.Description;
+        await _context.SaveChangesAsync();
+        return vendor;
+    }
+
+    [HttpDelete("vendors/{vendorId}", Name = "Delete Vendor")]
+    public async Task<ActionResult<Vendor>> DeleteVendor(int vendorId)
+    {
+        var vendorToDelete = await _context.Vendors.FirstOrDefaultAsync(e => e.VendorID == vendorId);
+        if (vendorToDelete == null)
+        {
+            return NotFound();
+        }
+        _context.Remove(vendorToDelete);
+        await _context.SaveChangesAsync();
+        return vendorToDelete;
     }
 }
