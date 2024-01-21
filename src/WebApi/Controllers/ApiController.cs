@@ -28,7 +28,19 @@ public class ApiController : ControllerBase
 
     [HttpPost("expenses", Name = "Create Expense")]
     public async Task<Expense> CreateExpense(
-        [Bind(["ExpenseCategoryID", "VendorID", "PaymentMethodID", "Amount", "Date", "Note"])] Expense expense
+        [Bind(
+            [
+                nameof(Expense.ExpenseCategoryID),
+                nameof(Expense.VendorID),
+                nameof(Expense.PaymentMethodID),
+                nameof(Expense.Amount),
+                nameof(Expense.Date),
+                nameof(Expense.Note),
+                nameof(Expense.ExpenseCategory),
+                nameof(Expense.Vendor),
+                nameof(Expense.PaymentMethod),
+            ]
+        )] Expense expense
     )
     {
         _context.Add(expense);
@@ -39,7 +51,16 @@ public class ApiController : ControllerBase
     [HttpPut("expenses/{expenseId}", Name = "Update Expense")]
     public async Task<ActionResult<Expense>> UpdateExpense(
         int expenseId,
-        [Bind(["ExpenseCategoryID", "VendorID", "PaymentMethodID", "Amount", "Date", "Note"])] Expense expense
+        [Bind(
+            [
+                nameof(Expense.ExpenseCategoryID),
+                nameof(Expense.VendorID),
+                nameof(Expense.PaymentMethodID),
+                nameof(Expense.Amount),
+                nameof(Expense.Date),
+                nameof(Expense.Note),
+            ]
+        )] Expense expense
     )
     {
         var expenseToUpdate = await _context.Expenses.FirstOrDefaultAsync(e => e.ExpenseID == expenseId);
@@ -78,7 +99,7 @@ public class ApiController : ControllerBase
 
     [HttpPost("expense-categories", Name = "Create Expense Category")]
     public async Task<ExpenseCategory> CreateExpenseCategory(
-        [Bind(["DisplayName", "Description"])] ExpenseCategory expenseCategory
+        [Bind([nameof(ExpenseCategory.DisplayName), nameof(ExpenseCategory.Description)])] ExpenseCategory expenseCategory
     )
     {
         _context.Add(expenseCategory);
@@ -89,7 +110,7 @@ public class ApiController : ControllerBase
     [HttpPut("expense-categories/{expenseCategoryId}", Name = "Update Expense Category")]
     public async Task<ActionResult<ExpenseCategory>> UpdateExpenseCategory(
         int expenseCategoryId,
-        [Bind(["DisplayName", "Description"])] ExpenseCategory expenseCategory
+        [Bind([nameof(ExpenseCategory.DisplayName), nameof(ExpenseCategory.Description)])] ExpenseCategory expenseCategory
     )
     {
         var expenseCategoryToUpdate = await _context.ExpenseCategories.FirstOrDefaultAsync(e => e.ExpenseCategoryID == expenseCategoryId);
@@ -127,7 +148,17 @@ public class ApiController : ControllerBase
 
     [HttpPost("incomes", Name = "Create Income")]
     public async Task<Income> CreateIncome(
-        [Bind(["IncomeCategoryID", "IncomeSourceID", "Amount", "Date", "Note"])] Income income
+        [Bind(
+            [
+                nameof(Income.IncomeCategoryID),
+                nameof(Income.IncomeSourceID),
+                nameof(Income.Amount),
+                nameof(Income.Date),
+                nameof(Income.Note),
+                nameof(Income.IncomeCategory),
+                nameof(Income.IncomeSource)
+            ]
+        )] Income income
     )
     {
         _context.Add(income);
@@ -138,7 +169,15 @@ public class ApiController : ControllerBase
     [HttpPut("incomes/{incomeId}", Name = "Update Income")]
     public async Task<ActionResult<Income>> UpdateIncome(
         int incomeId,
-        [Bind(["IncomeCategoryID", "IncomeSourceID", "Amount", "Date", "Note"])] Income income
+        [Bind(
+            [
+                nameof(Income.IncomeCategoryID),
+                nameof(Income.IncomeSourceID),
+                nameof(Income.Amount),
+                nameof(Income.Date),
+                nameof(Income.Note)
+            ]
+        )] Income income
     )
     {
         var incomeToUpdate = await _context.Incomes.FirstOrDefaultAsync(e => e.IncomeID == incomeId);
@@ -176,7 +215,7 @@ public class ApiController : ControllerBase
 
     [HttpPost("income-categories", Name = "Create Income Category")]
     public async Task<IncomeCategory> CreateIncomeCategory(
-        [Bind(["DisplayName", "Description"])] IncomeCategory incomeCategory
+        [Bind([nameof(IncomeCategory.DisplayName), nameof(IncomeCategory.Description)])] IncomeCategory incomeCategory
     )
     {
         _context.Add(incomeCategory);
@@ -187,7 +226,7 @@ public class ApiController : ControllerBase
     [HttpPut("income-categories/{incomeCategoryId}", Name = "Update Income Category")]
     public async Task<ActionResult<IncomeCategory>> UpdateIncomeCategory(
         int incomeCategoryId,
-        [Bind(["DisplayName", "Description"])] IncomeCategory incomeCategory
+        [Bind([nameof(IncomeCategory.DisplayName), nameof(IncomeCategory.Description)])] IncomeCategory incomeCategory
     )
     {
         var incomeCategoryToUpdate = await _context.IncomeCategories.FirstOrDefaultAsync(e => e.IncomeCategoryID == incomeCategoryId);
@@ -222,7 +261,7 @@ public class ApiController : ControllerBase
 
     [HttpPost("income-sources", Name = "Create Income Source")]
     public async Task<IncomeSource> CreateIncomeSource(
-        [Bind(["DisplayName", "Description"])] IncomeSource incomeSource
+        [Bind([nameof(IncomeSource.DisplayName), nameof(IncomeSource.Description)])] IncomeSource incomeSource
     )
     {
         _context.Add(incomeSource);
@@ -233,7 +272,7 @@ public class ApiController : ControllerBase
     [HttpPut("income-sources/{incomeSourceId}", Name = "Update Income Source")]
     public async Task<ActionResult<IncomeSource>> UpdateIncomeSource(
         int incomeSourceId,
-        [Bind(["DisplayName", "Description"])] IncomeSource incomeSource
+        [Bind([nameof(IncomeSource.DisplayName), nameof(IncomeSource.Description)])] IncomeSource incomeSource
     )
     {
         var incomeSourceToUpdate = await _context.IncomeSources.FirstOrDefaultAsync(e => e.IncomeSourceID == incomeSourceId);
@@ -268,7 +307,7 @@ public class ApiController : ControllerBase
 
     [HttpPost("payment-methods", Name = "Create Payment Method")]
     public async Task<PaymentMethod> CreatePaymentMethod(
-        [Bind(["DisplayName", "Description"])] PaymentMethod paymentMethod
+        [Bind([nameof(PaymentMethod.DisplayName), nameof(PaymentMethod.Description)])] PaymentMethod paymentMethod
     )
     {
         _context.Add(paymentMethod);
@@ -279,7 +318,7 @@ public class ApiController : ControllerBase
     [HttpPut("payment-methods/{paymentMethodId}", Name = "Update Payment Method")]
     public async Task<ActionResult<PaymentMethod>> UpdatePaymentMethod(
         int paymentMethodId,
-        [Bind(["DisplayName", "Description"])] PaymentMethod paymentMethod
+        [Bind([nameof(PaymentMethod.DisplayName), nameof(PaymentMethod.Description)])] PaymentMethod paymentMethod
     )
     {
         var paymentMethodToUpdate = await _context.PaymentMethods.FirstOrDefaultAsync(e => e.PaymentMethodID == paymentMethodId);
@@ -314,7 +353,7 @@ public class ApiController : ControllerBase
 
     [HttpPost("vendors", Name = "Create Vendor")]
     public async Task<Vendor> CreateVendor(
-        [Bind(["DisplayName", "Description"])] Vendor vendor
+        [Bind([nameof(Vendor.DisplayName), nameof(Vendor.Description)])] Vendor vendor
     )
     {
         _context.Add(vendor);
@@ -325,7 +364,7 @@ public class ApiController : ControllerBase
     [HttpPut("vendors/{vendorId}", Name = "Update Vendor")]
     public async Task<ActionResult<Vendor>> UpdateVendor(
         int vendorId,
-        [Bind(["DisplayName", "Description"])] Vendor vendor
+        [Bind([nameof(Vendor.DisplayName), nameof(Vendor.Description)])] Vendor vendor
     )
     {
         var vendorToUpdate = await _context.Vendors.FirstOrDefaultAsync(e => e.VendorID == vendorId);
