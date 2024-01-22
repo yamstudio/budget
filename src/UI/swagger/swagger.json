@@ -1341,7 +1341,7 @@
             "format": "double"
           },
           "date": {
-            "type": "String",
+            "type": "string",
             "format": "date"
           },
           "note": {
@@ -1404,7 +1404,7 @@
             "format": "double"
           },
           "date": {
-            "type": "String",
+            "type": "string",
             "format": "date"
           },
           "note": {

@@ -9,7 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
     {
-        options.MapType<DateOnly>(() => new OpenApiSchema { Type = typeof(string).Name, Format = "date" });
+        options.MapType<DateOnly>(() => new OpenApiSchema { Type = "string", Format = "date" });
     }
 );
 builder.Services.AddDbContext<BudgetDbContext>(
