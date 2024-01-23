@@ -4,51 +4,55 @@ import { Api, Expense, ExpenseCategory, PaymentMethod, Vendor } from './gensrc/A
 import { AgGridReact, CustomCellRendererProps } from 'ag-grid-react';
 import ButtonCellRenderer from './ButtonCellRenderer';
 import { Button } from 'antd';
+import { format } from 'date-fns';
+
+type ExpensesProps = {
+    expenseCategories: ExpenseCategory[];
+    vendors: Vendor[];
+    paymentMethods: PaymentMethod[];
+    fromDate: Date;
+    toDate: Date;
+}
 
 type ExpenseRow = Omit<Expense, 'expenseCategory' | 'vendor' | 'paymentMethod'> & ({
     original: Expense | undefined;
 })
 
-const Expenses = () => {
-    const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([]);
+const Expenses = ({ fromDate, toDate, expenseCategories, vendors, paymentMethods }: ExpensesProps) => {
     const expenseCategoryIDs = useMemo(() => expenseCategories.map(({ expenseCategoryID }) => expenseCategoryID), [expenseCategories]);
     const expenseCategoryIDToDisplayName: { [key: string]: string } = useMemo(() => expenseCategories.reduce((accumulator, { expenseCategoryID, displayName }) => ({
         ...accumulator,
         [expenseCategoryID!]: displayName
     }), {} as { [key: string]: string }), [expenseCategories]);
-    useEffect(() => {
-        new Api().api.getExpenseCategories().then(({ data }) => setExpenseCategories(data))
-    }, []);
 
-    const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
     const paymentMethodIDs = useMemo(() => paymentMethods.map(({ paymentMethodID }) => paymentMethodID), [paymentMethods]);
     const paymentMethodIDToDisplayName: { [key: string]: string } = useMemo(() => paymentMethods.reduce((accumulator, { paymentMethodID, displayName }) => ({
         ...accumulator,
         [paymentMethodID!]: displayName
     }), {} as { [key: string]: string }), [paymentMethods]);
-    useEffect(() => {
-        new Api().api.getPaymentMethods().then(({ data }) => setPaymentMethods(data))
-    }, []);
 
-    const [vendors, setVendors] = useState<Vendor[]>([]);
     const vendorIDs = useMemo(() => vendors.map(({ vendorID }) => vendorID), [vendors]);
     const vendorIDToDisplayName: { [key: string]: string } = useMemo(() => vendors.reduce((accumulator, { vendorID, displayName }) => ({
         ...accumulator,
         [vendorID!]: displayName
     }), {} as { [key: string]: string }), [vendors]);
-    useEffect(() => {
-        new Api().api.getVendors().then(({ data }) => setVendors(data))
-    }, []);
 
     const [expenseRows, setExpenseRows] = useState<ExpenseRow[]>([]);
     const [nextExpenseID, setNextExpenseID] = useState<number>(-1);
     useEffect(() => {
-        new Api().api.getExpenses().then(({ data }) => setExpenseRows(
-            data.map(expense => ({
-                ...expense,
-                original: expense,
-            }))))
-    }, []);
+        new Api()
+            .api
+            .getExpenses({
+                fromDate: format(fromDate, 'yyyy-MM-dd'),
+                toDate: format(toDate, 'yyyy-MM-dd'),
+            })
+            .then(({ data }) => 
+                setExpenseRows(
+                    data.map(expense => ({
+                        ...expense,
+                        original: expense,
+                    }))));
+    }, [fromDate, toDate]);
 
     const colDefs: ColDef<ExpenseRow>[] = useMemo(() => [
         {
