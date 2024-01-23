@@ -4,41 +4,48 @@ import { Api, Income, IncomeCategory, IncomeSource } from './gensrc/Api';
 import { AgGridReact, CustomCellRendererProps } from 'ag-grid-react';
 import ButtonCellRenderer from './ButtonCellRenderer';
 import { Button } from 'antd';
+import { format } from 'date-fns';
+
+type IncomesProps = {
+    incomeCategories: IncomeCategory[];
+    incomeSources: IncomeSource[];
+    fromDate: Date;
+    toDate: Date;
+}
 
 type IncomeRow = Omit<Income, 'incomeCategory' | 'incomeSource'> & ({
     original: Income | undefined;
 })
 
-const Incomes = () => {
-    const [incomeCategories, setIncomeCategories] = useState<IncomeCategory[]>([]);
+const Incomes = ({ fromDate, toDate, incomeCategories, incomeSources }: IncomesProps) => {
     const incomeCategoryIDs = useMemo(() => incomeCategories.map(({ incomeCategoryID }) => incomeCategoryID), [incomeCategories]);
     const incomeCategoryIDToDisplayName: { [key: string]: string } = useMemo(() => incomeCategories.reduce((accumulator, { incomeCategoryID, displayName }) => ({
         ...accumulator,
         [incomeCategoryID!]: displayName
     }), {} as { [key: string]: string }), [incomeCategories]);
-    useEffect(() => {
-        new Api().api.getIncomeCategories().then(({ data }) => setIncomeCategories(data))
-    }, []);
 
-    const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([]);
     const incomeSourceIDs = useMemo(() => incomeSources.map(({ incomeSourceID }) => incomeSourceID), [incomeSources]);
     const incomeSourceIDToDisplayName: { [key: string]: string } = useMemo(() => incomeSources.reduce((accumulator, { incomeSourceID, displayName }) => ({
         ...accumulator,
         [incomeSourceID!]: displayName
     }), {} as { [key: string]: string }), [incomeSources]);
-    useEffect(() => {
-        new Api().api.getIncomeSources().then(({ data }) => setIncomeSources(data))
-    }, []);
 
     const [incomeRows, setIncomeRows] = useState<IncomeRow[]>([]);
     const [nextIncomeID, setNextIncomeID] = useState<number>(-1);
     useEffect(() => {
-        new Api().api.getIncomes().then(({ data }) => setIncomeRows(
-            data.map(income => ({
-                ...income,
-                original: income,
-            }))))
-    }, []);
+        new Api()
+            .api
+            .getIncomes({
+                fromDate: format(fromDate, 'yyyy-MM-dd'),
+                toDate: format(toDate, 'yyyy-MM-dd'),
+            })
+            .then(({ data }) => 
+                setIncomeRows(
+                    data.map(income => ({
+                        ...income,
+                        original: income,
+                    }))));
+    }, [fromDate, toDate]);
 
     const colDefs: ColDef<IncomeRow>[] = useMemo(() => [
         {

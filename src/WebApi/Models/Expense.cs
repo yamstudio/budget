@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace YamStudio.Budget.WebApi.Models;
 
+[Index(nameof(Date))]
 public class Expense {
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int ExpenseID { get; set; }

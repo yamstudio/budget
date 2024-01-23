@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.EntityFrameworkCore;
 using YamStudio.Budget.WebApi.Data;
 using YamStudio.Budget.WebApi.Models;
@@ -17,12 +18,14 @@ public class ApiController : ControllerBase
     }
 
     [HttpGet("expenses", Name = "Get Expenses")]
-    public async Task<ICollection<Expense>> GetExpenses()
+    public async Task<ActionResult<ICollection<Expense>>> GetExpenses(
+        [BindRequired, FromQuery(Name = "fromDate")] DateOnly fromDate,
+        [BindRequired, FromQuery(Name = "toDate")] DateOnly toDate
+    )
     {
         return await _context.Expenses
-            .Include(e => e.ExpenseCategory)
-            .Include(e => e.Vendor)
-            .Include(e => e.PaymentMethod)
+            .Where(e => e.Date >= fromDate)
+            .Where(e => e.Date <= toDate)
             .ToListAsync();
     }
 
@@ -138,11 +141,12 @@ public class ApiController : ControllerBase
     }
 
     [HttpGet("incomes", Name = "Get Incomes")]
-    public async Task<ICollection<Income>> GetIncomes()
+    public async Task<ICollection<Income>> GetIncomes(
+        [BindRequired, FromQuery(Name = "fromDate")] DateOnly fromDate,
+        [BindRequired, FromQuery(Name = "toDate")] DateOnly toDate
+    )
     {
         return await _context.Incomes
-            .Include(e => e.IncomeCategory)
-            .Include(e => e.IncomeSource)
             .ToListAsync();
     }
 
