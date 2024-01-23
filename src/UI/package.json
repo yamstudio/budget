@@ -1,6 +1,10 @@
 {
   "name": "budget",
   "version": "0.1.0",
+  "description": "UI for Budgeting App",
+  "homepage": "https://github.com/yamstudio/budget",
+  "license": "MIT",
+  "author": "Yujun Qin <yamstudio@users.noreply.github.com>",
   "private": true,
   "dependencies": {
     "ag-grid-react": "^31.0.2",
