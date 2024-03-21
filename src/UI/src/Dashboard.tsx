@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Api, Expense, ExpenseCategory } from './gensrc/Api';
 import { format, eachMonthOfInterval } from 'date-fns';
-import { ChartDataset, Chart as ChartJS, CategoryScale, LinearScale, BarElement, ChartData, Tooltip } from "chart.js";
+import { ChartDataset, Chart as ChartJS, CategoryScale, Colors, Legend, LinearScale, BarElement, ChartData, Tooltip } from "chart.js";
 import { Bar } from "react-chartjs-2";
 import { chain } from 'lodash';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
+ChartJS.register(CategoryScale, Colors, Legend, LinearScale, BarElement, Tooltip);
 
 type DashboardProps = {
     expenseCategories: ExpenseCategory[];
@@ -60,9 +60,6 @@ const Dashboard = ({ fromDate, toDate, expenseCategories }: DashboardProps) => {
                 datasetIdKey='expenseCategoryID'
                 data={monthlyAmountAggregatedByCategory}
                 options={{
-                    backgroundColor: '#9BD0F5',
-                    borderColor: '#36A2EB',
-                    color: '#000',
                     responsive: true,
                     hover: {
                         mode: 'nearest',
@@ -72,6 +69,21 @@ const Dashboard = ({ fromDate, toDate, expenseCategories }: DashboardProps) => {
                         tooltip: {
                             enabled: true,
                             mode: 'nearest'
+                        },
+                        legend: { position: 'right'},
+                    },
+                    scales: {
+                        x: {
+                            stacked: true,
+                            title: {
+                                text: 'Month',
+                            }
+                        },
+                        y: {
+                            stacked: true,
+                            title: {
+                                text: 'Amount',
+                            }
                         }
                     }
                 }}
