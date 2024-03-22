@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ColDef, GetRowIdFunc } from 'ag-grid-community';
 import { Api, Expense, ExpenseCategory, PaymentMethod, Vendor } from './gensrc/Api';
 import { AgGridReact, CustomCellRendererProps } from 'ag-grid-react';
+import AutoCompleteCellEditor from './AutoCompleteCellEditor';
 import ButtonCellRenderer from './ButtonCellRenderer';
 import { Button } from 'antd';
 import { format } from 'date-fns';
@@ -19,19 +20,16 @@ type ExpenseRow = Omit<Expense, 'expenseCategory' | 'vendor' | 'paymentMethod'> 
 })
 
 const Expenses = ({ fromDate, toDate, expenseCategories, vendors, paymentMethods }: ExpensesProps) => {
-    const expenseCategoryIDs = useMemo(() => expenseCategories.map(({ expenseCategoryID }) => expenseCategoryID), [expenseCategories]);
     const expenseCategoryIDToDisplayName: { [key: string]: string } = useMemo(() => expenseCategories.reduce((accumulator, { expenseCategoryID, displayName }) => ({
         ...accumulator,
         [expenseCategoryID!]: displayName
     }), {} as { [key: string]: string }), [expenseCategories]);
 
-    const paymentMethodIDs = useMemo(() => paymentMethods.map(({ paymentMethodID }) => paymentMethodID), [paymentMethods]);
     const paymentMethodIDToDisplayName: { [key: string]: string } = useMemo(() => paymentMethods.reduce((accumulator, { paymentMethodID, displayName }) => ({
         ...accumulator,
         [paymentMethodID!]: displayName
     }), {} as { [key: string]: string }), [paymentMethods]);
 
-    const vendorIDs = useMemo(() => vendors.map(({ vendorID }) => vendorID), [vendors]);
     const vendorIDToDisplayName: { [key: string]: string } = useMemo(() => vendors.reduce((accumulator, { vendorID, displayName }) => ({
         ...accumulator,
         [vendorID!]: displayName
@@ -138,10 +136,7 @@ const Expenses = ({ fromDate, toDate, expenseCategories, vendors, paymentMethods
             refData: expenseCategoryIDToDisplayName,
             width: 200,
             editable: true,
-            cellEditor: 'agSelectCellEditor',
-            cellEditorParams: {
-                values: expenseCategoryIDs
-            },
+            cellEditor: AutoCompleteCellEditor,
         },
         {
             field: 'vendorID',
@@ -149,10 +144,7 @@ const Expenses = ({ fromDate, toDate, expenseCategories, vendors, paymentMethods
             refData: vendorIDToDisplayName,
             width: 200,
             editable: true,
-            cellEditor: 'agSelectCellEditor',
-            cellEditorParams: {
-                values: vendorIDs
-            },
+            cellEditor: AutoCompleteCellEditor,
         },
         {
             field: 'paymentMethodID',
@@ -160,10 +152,7 @@ const Expenses = ({ fromDate, toDate, expenseCategories, vendors, paymentMethods
             refData: paymentMethodIDToDisplayName,
             width: 200,
             editable: true,
-            cellEditor: 'agSelectCellEditor',
-            cellEditorParams: {
-                values: paymentMethodIDs
-            },
+            cellEditor: AutoCompleteCellEditor,
         },
         { 
             field: 'amount',
@@ -175,7 +164,7 @@ const Expenses = ({ fromDate, toDate, expenseCategories, vendors, paymentMethods
             },
         },
         { field: 'note', editable: true, },
-    ], [expenseCategoryIDs, expenseCategoryIDToDisplayName, paymentMethodIDs, paymentMethodIDToDisplayName, vendorIDs, vendorIDToDisplayName]);
+    ], [expenseCategoryIDToDisplayName, paymentMethodIDToDisplayName, vendorIDToDisplayName]);
     const getRowId: GetRowIdFunc<ExpenseRow> = ({ data }) => `${data.expenseID}`;
 
     const addExpenseHandler = () => {
@@ -203,6 +192,7 @@ const Expenses = ({ fromDate, toDate, expenseCategories, vendors, paymentMethods
                     rowData={expenseRows}
                     columnDefs={colDefs}
                     getRowId={getRowId}
+                    reactiveCustomComponents={true}
                 ></AgGridReact>
             </div>
         </div>

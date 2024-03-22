@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ColDef, GetRowIdFunc } from 'ag-grid-community';
 import { Api, Income, IncomeCategory, IncomeSource } from './gensrc/Api';
 import { AgGridReact, CustomCellRendererProps } from 'ag-grid-react';
+import AutoCompleteCellEditor from './AutoCompleteCellEditor';
 import ButtonCellRenderer from './ButtonCellRenderer';
 import { Button } from 'antd';
 import { format } from 'date-fns';
@@ -18,13 +19,11 @@ type IncomeRow = Omit<Income, 'incomeCategory' | 'incomeSource'> & ({
 })
 
 const Incomes = ({ fromDate, toDate, incomeCategories, incomeSources }: IncomesProps) => {
-    const incomeCategoryIDs = useMemo(() => incomeCategories.map(({ incomeCategoryID }) => incomeCategoryID), [incomeCategories]);
     const incomeCategoryIDToDisplayName: { [key: string]: string } = useMemo(() => incomeCategories.reduce((accumulator, { incomeCategoryID, displayName }) => ({
         ...accumulator,
         [incomeCategoryID!]: displayName
     }), {} as { [key: string]: string }), [incomeCategories]);
 
-    const incomeSourceIDs = useMemo(() => incomeSources.map(({ incomeSourceID }) => incomeSourceID), [incomeSources]);
     const incomeSourceIDToDisplayName: { [key: string]: string } = useMemo(() => incomeSources.reduce((accumulator, { incomeSourceID, displayName }) => ({
         ...accumulator,
         [incomeSourceID!]: displayName
@@ -129,10 +128,7 @@ const Incomes = ({ fromDate, toDate, incomeCategories, incomeSources }: IncomesP
             refData: incomeCategoryIDToDisplayName,
             width: 200,
             editable: true,
-            cellEditor: 'agSelectCellEditor',
-            cellEditorParams: {
-                values: incomeCategoryIDs
-            },
+            cellEditor: AutoCompleteCellEditor,
         },
         {
             field: 'incomeSourceID',
@@ -140,10 +136,7 @@ const Incomes = ({ fromDate, toDate, incomeCategories, incomeSources }: IncomesP
             refData: incomeSourceIDToDisplayName,
             width: 200,
             editable: true,
-            cellEditor: 'agSelectCellEditor',
-            cellEditorParams: {
-                values: incomeSourceIDs
-            },
+            cellEditor: AutoCompleteCellEditor,
         },
         { 
             field: 'amount',
@@ -155,7 +148,7 @@ const Incomes = ({ fromDate, toDate, incomeCategories, incomeSources }: IncomesP
             },
         },
         { field: 'note', editable: true, },
-    ], [incomeCategoryIDs, incomeCategoryIDToDisplayName, incomeSourceIDs, incomeSourceIDToDisplayName,]);
+    ], [incomeCategoryIDToDisplayName, incomeSourceIDToDisplayName,]);
     const getRowId: GetRowIdFunc<IncomeRow> = ({ data }) => `${data.incomeID}`;
 
     const addIncomeHandler = () => {
@@ -182,6 +175,7 @@ const Incomes = ({ fromDate, toDate, incomeCategories, incomeSources }: IncomesP
                     rowData={incomeRows}
                     columnDefs={colDefs}
                     getRowId={getRowId}
+                    reactiveCustomComponents={true}
                 ></AgGridReact>
             </div>
         </div>
