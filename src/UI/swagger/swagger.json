@@ -7,9 +7,7 @@
   "paths": {
     "/api/expenses": {
       "get": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Get Expenses",
         "parameters": [
           {
@@ -66,9 +64,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Create Expense",
         "requestBody": {
           "content": {
@@ -115,9 +111,7 @@
     },
     "/api/expenses/{expenseId}": {
       "put": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Update Expense",
         "parameters": [
           {
@@ -174,9 +168,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Delete Expense",
         "parameters": [
           {
@@ -216,9 +208,7 @@
     },
     "/api/expense-categories": {
       "get": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Get Expense Categories",
         "responses": {
           "200": {
@@ -253,9 +243,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Create Expense Category",
         "requestBody": {
           "content": {
@@ -302,9 +290,7 @@
     },
     "/api/expense-categories/{expenseCategoryId}": {
       "put": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Update Expense Category",
         "parameters": [
           {
@@ -361,9 +347,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Delete Expense Category",
         "parameters": [
           {
@@ -403,9 +387,7 @@
     },
     "/api/incomes": {
       "get": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Get Incomes",
         "parameters": [
           {
@@ -462,9 +444,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Create Income",
         "requestBody": {
           "content": {
@@ -511,9 +491,7 @@
     },
     "/api/incomes/{incomeId}": {
       "put": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Update Income",
         "parameters": [
           {
@@ -570,9 +548,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Delete Income",
         "parameters": [
           {
@@ -612,9 +588,7 @@
     },
     "/api/income-categories": {
       "get": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Get Income Categories",
         "responses": {
           "200": {
@@ -649,9 +623,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Create Income Category",
         "requestBody": {
           "content": {
@@ -698,9 +670,7 @@
     },
     "/api/income-categories/{incomeCategoryId}": {
       "put": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Update Income Category",
         "parameters": [
           {
@@ -757,9 +727,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Delete Income Category",
         "parameters": [
           {
@@ -799,9 +767,7 @@
     },
     "/api/income-sources": {
       "get": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Get Income Sources",
         "responses": {
           "200": {
@@ -836,9 +802,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Create Income Source",
         "requestBody": {
           "content": {
@@ -885,9 +849,7 @@
     },
     "/api/income-sources/{incomeSourceId}": {
       "put": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Update Income Source",
         "parameters": [
           {
@@ -944,9 +906,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Delete Income Source",
         "parameters": [
           {
@@ -986,9 +946,7 @@
     },
     "/api/payment-methods": {
       "get": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Get Payment Methods",
         "responses": {
           "200": {
@@ -1023,9 +981,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Create Payment Method",
         "requestBody": {
           "content": {
@@ -1072,9 +1028,7 @@
     },
     "/api/payment-methods/{paymentMethodId}": {
       "put": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Update Payment Method",
         "parameters": [
           {
@@ -1131,9 +1085,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Delete Payment Method",
         "parameters": [
           {
@@ -1173,9 +1125,7 @@
     },
     "/api/vendors": {
       "get": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Get Vendors",
         "responses": {
           "200": {
@@ -1210,9 +1160,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Create Vendor",
         "requestBody": {
           "content": {
@@ -1259,9 +1207,7 @@
     },
     "/api/vendors/{vendorId}": {
       "put": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Update Vendor",
         "parameters": [
           {
@@ -1318,9 +1264,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Api"
-        ],
+        "tags": ["Api"],
         "operationId": "Delete Vendor",
         "parameters": [
           {
