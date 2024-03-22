@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": false,
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -19,11 +15,7 @@
     "noEmit": true,
     "noFallthroughCasesInSwitch": true,
     "jsx": "react-jsx",
-    "types": [
-      "vite/client"
-    ]
+    "types": ["vite/client"]
   },
-  "include": [
-    "src"
-  ]
+  "include": ["src"]
 }
