@@ -7,7 +7,7 @@ node_modules/
 dist/
 
 # codegen
-src/gensrc/
+swagger/
 
 # misc
 .DS_Store
