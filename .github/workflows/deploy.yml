@@ -41,8 +41,8 @@ jobs:
       - name: dotnet publish
         run: dotnet publish -c Release -o .artifact
       
-      - name: npm run build
-        run: npm --prefix src/UI run build
+      - name: Build UI
+        run: npm --prefix src/UI install && npm --prefix src/UI run build
 
       - name: Copy UI dist into .artifact
         run: mkdir .artifact/static && cp -r src/UI/dist/* .artifact/static 
