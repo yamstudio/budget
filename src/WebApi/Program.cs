@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.OpenApi.Models;
@@ -22,22 +21,25 @@ builder.Services.AddControllers();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 
 app.MapControllers();
 
-app.UseFileServer(new FileServerOptions
+if (app.Environment.IsDevelopment())
 {
-    FileProvider = new PhysicalFileProvider(
-        Path.Combine(Directory.GetCurrentDirectory(), "static")),
-        RequestPath = "",
-        EnableDefaultFiles = true
-});
+    app.MapFallbackToFile("/index.html");
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+}
+else
+{
+    var fileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "static"));
+    app.MapFallbackToFile("/index.html", new StaticFileOptions { FileProvider = fileProvider });
+    app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = fileProvider });
+    app.UseStaticFiles(new StaticFileOptions { FileProvider = fileProvider });
+}
 
 app.Run();
