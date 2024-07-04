@@ -1,0 +1,16 @@
+{
+  "folders": [
+    {
+      "path": ".."
+    }
+  ],
+  "settings": {},
+  "extensions": {
+    "recommendations": [
+      "ms-dotnettools.csharp",
+      "ms-dotnettools.vscode-dotnet-runtime",
+      "ms-dotnettools.csdevkit",
+      "ms-vscode.vscode-typescript-next"
+    ]
+  }
+}
