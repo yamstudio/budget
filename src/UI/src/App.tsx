@@ -67,6 +67,28 @@ const App = () => {
     new Api().api.getIncomeSources().then(({ data }) => setIncomeSources(data))
   }, [])
 
+  const addVendor = (vendorDisplayName: string) =>
+    new Api().api
+      .createVendor({
+        displayName: vendorDisplayName,
+        description: vendorDisplayName,
+      })
+      .then(({ data }) => {
+        setVendors([...vendors, data])
+        return data
+      })
+
+  const addPaymentMethod = (paymentMethodDisplayName: string) =>
+    new Api().api
+      .createPaymentMethod({
+        displayName: paymentMethodDisplayName,
+        description: paymentMethodDisplayName,
+      })
+      .then(({ data }) => {
+        setPaymentMethods([...paymentMethods, data])
+        return data
+      })
+
   return (
     <Flex>
       <Layout style={{ height: '100vh', display: 'flex' }}>
@@ -84,7 +106,9 @@ const App = () => {
                   toDate={toDate}
                   expenseCategories={expenseCategories}
                   vendors={vendors}
+                  addVendor={addVendor}
                   paymentMethods={paymentMethods}
+                  addPaymentMethod={addPaymentMethod}
                 />
               }
             />
