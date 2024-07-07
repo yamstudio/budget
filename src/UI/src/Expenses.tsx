@@ -10,7 +10,9 @@ import { format } from 'date-fns'
 type ExpensesProps = {
   expenseCategories: ExpenseCategory[]
   vendors: Vendor[]
+  addVendor: (vendorDisplayName: string) => Promise<Vendor>
   paymentMethods: PaymentMethod[]
+  addPaymentMethod: (paymentMethodDisplayName: string) => Promise<PaymentMethod>
   fromDate: Date
   toDate: Date
 }
@@ -19,7 +21,7 @@ type ExpenseRow = Omit<Expense, 'expenseCategory' | 'vendor' | 'paymentMethod'> 
   original: Expense | undefined
 }
 
-const Expenses = ({ fromDate, toDate, expenseCategories, vendors, paymentMethods }: ExpensesProps) => {
+const Expenses = ({ fromDate, toDate, expenseCategories, vendors, addVendor, paymentMethods, addPaymentMethod }: ExpensesProps) => {
   const expenseCategoryIDToDisplayName: { [key: string]: string } = useMemo(
     () =>
       expenseCategories.reduce(
@@ -160,6 +162,9 @@ const Expenses = ({ fromDate, toDate, expenseCategories, vendors, paymentMethods
         width: 200,
         editable: true,
         cellEditor: AutoCompleteCellEditor,
+        cellEditorParams: {
+          addRefData: (vendorDisplayName: string) => addVendor(vendorDisplayName).then(({ vendorID }) => vendorID),
+        },
       },
       {
         field: 'paymentMethodID',
@@ -168,6 +173,10 @@ const Expenses = ({ fromDate, toDate, expenseCategories, vendors, paymentMethods
         width: 200,
         editable: true,
         cellEditor: AutoCompleteCellEditor,
+        cellEditorParams: {
+          addRefData: (paymentMethodDisplayName: string) =>
+            addPaymentMethod(paymentMethodDisplayName).then(({ paymentMethodID }) => paymentMethodID),
+        },
       },
       {
         field: 'amount',
