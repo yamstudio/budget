@@ -4,14 +4,14 @@ import { Api, Expense, ExpenseCategory, PaymentMethod, Vendor } from './gensrc/A
 import { AgGridReact, CustomCellRendererProps } from 'ag-grid-react'
 import AutoCompleteCellEditor from './AutoCompleteCellEditor'
 import ButtonCellRenderer from './ButtonCellRenderer'
-import { Button } from 'antd'
+import { Button, Spin } from 'antd'
 import { format } from 'date-fns'
 
 type ExpensesProps = {
-  expenseCategories: ExpenseCategory[]
-  vendors: Vendor[]
+  expenseCategories: ExpenseCategory[] | undefined
+  vendors: Vendor[] | undefined
   addVendor: (vendorDisplayName: string) => Promise<Vendor>
-  paymentMethods: PaymentMethod[]
+  paymentMethods: PaymentMethod[] | undefined
   addPaymentMethod: (paymentMethodDisplayName: string) => Promise<PaymentMethod>
   fromDate: Date
   toDate: Date
@@ -22,6 +22,13 @@ type ExpenseRow = Omit<Expense, 'expenseCategory' | 'vendor' | 'paymentMethod'> 
 }
 
 const Expenses = ({ fromDate, toDate, expenseCategories, vendors, addVendor, paymentMethods, addPaymentMethod }: ExpensesProps) => {
+  if (!expenseCategories || !vendors || !paymentMethods) {
+    return (
+      <div style={{ display: 'flex', flex: 1, flexDirection: 'column' }}>
+        <Spin size="large" />
+      </div>
+    )
+  }
   const expenseCategoryIDToDisplayName: { [key: string]: string } = useMemo(
     () =>
       expenseCategories.reduce(

@@ -42,27 +42,27 @@ const App = () => {
   const toDate = useMemo(() => addDays(today, 1), [today])
   const fromDate = useMemo(() => startOfMonth(addMonths(today, -3)), [today])
 
-  const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([])
+  const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[] | undefined>(undefined)
   useEffect(() => {
     new Api().api.getExpenseCategories().then(({ data }) => setExpenseCategories(data))
   }, [])
 
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[] | undefined>(undefined)
   useEffect(() => {
     new Api().api.getPaymentMethods().then(({ data }) => setPaymentMethods(data))
   }, [])
 
-  const [vendors, setVendors] = useState<Vendor[]>([])
+  const [vendors, setVendors] = useState<Vendor[] | undefined>(undefined)
   useEffect(() => {
     new Api().api.getVendors().then(({ data }) => setVendors(data))
   }, [])
 
-  const [incomeCategories, setIncomeCategories] = useState<IncomeCategory[]>([])
+  const [incomeCategories, setIncomeCategories] = useState<IncomeCategory[] | undefined>(undefined)
   useEffect(() => {
     new Api().api.getIncomeCategories().then(({ data }) => setIncomeCategories(data))
   }, [])
 
-  const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([])
+  const [incomeSources, setIncomeSources] = useState<IncomeSource[] | undefined>(undefined)
   useEffect(() => {
     new Api().api.getIncomeSources().then(({ data }) => setIncomeSources(data))
   }, [])
@@ -74,7 +74,7 @@ const App = () => {
         description: vendorDisplayName,
       })
       .then(({ data }) => {
-        setVendors([...vendors, data])
+        setVendors([...(vendors || []), data])
         return data
       })
 
@@ -85,7 +85,7 @@ const App = () => {
         description: paymentMethodDisplayName,
       })
       .then(({ data }) => {
-        setPaymentMethods([...paymentMethods, data])
+        setPaymentMethods([...(paymentMethods || []), data])
         return data
       })
 
