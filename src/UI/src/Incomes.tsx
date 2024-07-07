@@ -4,12 +4,12 @@ import { Api, Income, IncomeCategory, IncomeSource } from './gensrc/Api'
 import { AgGridReact, CustomCellRendererProps } from 'ag-grid-react'
 import AutoCompleteCellEditor from './AutoCompleteCellEditor'
 import ButtonCellRenderer from './ButtonCellRenderer'
-import { Button } from 'antd'
+import { Button, Spin } from 'antd'
 import { format } from 'date-fns'
 
 type IncomesProps = {
-  incomeCategories: IncomeCategory[]
-  incomeSources: IncomeSource[]
+  incomeCategories: IncomeCategory[] | undefined
+  incomeSources: IncomeSource[] | undefined
   fromDate: Date
   toDate: Date
 }
@@ -19,6 +19,13 @@ type IncomeRow = Omit<Income, 'incomeCategory' | 'incomeSource'> & {
 }
 
 const Incomes = ({ fromDate, toDate, incomeCategories, incomeSources }: IncomesProps) => {
+  if (!incomeCategories || !incomeSources) {
+    return (
+      <div style={{ display: 'flex', flex: 1, flexDirection: 'column' }}>
+        <Spin size="large" />
+      </div>
+    )
+  }
   const incomeCategoryIDToDisplayName: { [key: string]: string } = useMemo(
     () =>
       incomeCategories.reduce(

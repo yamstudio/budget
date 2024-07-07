@@ -4,16 +4,24 @@ import { format, eachMonthOfInterval } from 'date-fns'
 import { ChartDataset, Chart as ChartJS, CategoryScale, Colors, Legend, LinearScale, BarElement, ChartData, Tooltip } from 'chart.js'
 import { Bar } from 'react-chartjs-2'
 import { chain } from 'lodash'
+import { Spin } from 'antd'
 
 ChartJS.register(CategoryScale, Colors, Legend, LinearScale, BarElement, Tooltip)
 
 type DashboardProps = {
-  expenseCategories: ExpenseCategory[]
+  expenseCategories: ExpenseCategory[] | undefined
   fromDate: Date
   toDate: Date
 }
 
 const Dashboard = ({ fromDate, toDate, expenseCategories }: DashboardProps) => {
+  if (!expenseCategories) {
+    return (
+      <div style={{ display: 'flex', flex: 1, flexDirection: 'column' }}>
+        <Spin size="large" />
+      </div>
+    )
+  }
   const [expenses, setExpenses] = useState<Expense[]>([])
   useEffect(() => {
     if (!expenseCategories.length) {
