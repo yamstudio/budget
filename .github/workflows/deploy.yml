@@ -51,7 +51,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: budget
-          path: .artifact/
+          path: budget/.artifact/
           if-no-files-found: error
   
   arm-deploy:
