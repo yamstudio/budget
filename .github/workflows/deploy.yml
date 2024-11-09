@@ -39,19 +39,19 @@ jobs:
         run: dotnet build --configuration Release
 
       - name: dotnet publish
-        run: dotnet publish -c Release --property:PublishDir=${PWD}/.artifact
+        run: dotnet publish -c Release --property:PublishDir=${PWD}/artifact
       
       - name: Build UI
         run: npm --prefix src/UI install && npm --prefix src/UI run build
 
-      - name: Copy UI dist into .artifact
-        run: mkdir .artifact/static && cp -r src/UI/dist/* .artifact/static 
+      - name: Copy UI dist into artifact
+        run: mkdir artifact/static && cp -r src/UI/dist/* artifact/static 
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: budget
-          path: budget/.artifact/
+          path: artifact/
           if-no-files-found: error
   
   arm-deploy:
