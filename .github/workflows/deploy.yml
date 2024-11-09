@@ -39,7 +39,7 @@ jobs:
         run: dotnet build --configuration Release
 
       - name: dotnet publish
-        run: dotnet publish -c Release -o .artifact
+        run: dotnet publish -c Release --property:PublishDir=.artifact
       
       - name: Build UI
         run: npm --prefix src/UI install && npm --prefix src/UI run build
