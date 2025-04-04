@@ -3,7 +3,7 @@ import { ColDef, GetRowIdFunc } from 'ag-grid-community'
 import { Api, Expense, ExpenseCategory, PaymentMethod, Vendor } from './gensrc/Api'
 import { AgGridReact, CustomCellRendererProps } from 'ag-grid-react'
 import AutoCompleteCellEditor from './AutoCompleteCellEditor'
-import ButtonCellRenderer from './ButtonCellRenderer'
+import ButtonCellRenderer, { ButtonCellRendererProps } from './ButtonCellRenderer'
 import { Button, Spin } from 'antd'
 import { format } from 'date-fns'
 
@@ -91,12 +91,16 @@ const Expenses = ({ fromDate, toDate, expenseCategories, vendors, addVendor, pay
         cellRenderer: ButtonCellRenderer,
         cellRendererParams: {
           text: 'Save',
-          isDisabledGetter: ({ original, date, amount, note, expenseCategoryID, vendorID, paymentMethodID }: ExpenseRow) => {
+          isDisabledGetter: (expenseRow: ExpenseRow | undefined) => {
+            if (!expenseRow) {
+              return true
+            }
+            const { original, date, amount, note, expenseCategoryID, vendorID, paymentMethodID } = expenseRow
             if (!(date && amount && expenseCategoryID && vendorID && paymentMethodID)) {
               return true
             }
             return (
-              original &&
+              !!original &&
               date === original.date &&
               amount === original.amount &&
               note === original.note &&
@@ -129,7 +133,7 @@ const Expenses = ({ fromDate, toDate, expenseCategories, vendors, addVendor, pay
               setExpenseRows((rows) => [...rows.filter((row) => row.expenseID !== expenseID), newData])
             })
           },
-        },
+        } satisfies ButtonCellRendererProps<ExpenseRow>,
         minWidth: 95,
         maxWidth: 95,
       },
@@ -139,7 +143,7 @@ const Expenses = ({ fromDate, toDate, expenseCategories, vendors, addVendor, pay
         cellRenderer: ButtonCellRenderer,
         cellRendererParams: {
           text: 'Delete',
-          isDisabledGetter: () => false,
+          isDisabledGetter: (expenseRow: ExpenseRow | undefined) => !expenseRow?.original,
           clickedHandler: ({ data, api }: CustomCellRendererProps<ExpenseRow>) => {
             const promise = data!.original ? new Api().api.deleteExpense(data!.expenseID!) : Promise.resolve(void 0)
             promise.then(() => {
@@ -149,7 +153,7 @@ const Expenses = ({ fromDate, toDate, expenseCategories, vendors, addVendor, pay
               setExpenseRows((rows) => rows.filter(({ expenseID }) => expenseID !== data!.expenseID))
             })
           },
-        },
+        } satisfies ButtonCellRendererProps<ExpenseRow>,
         minWidth: 105,
         maxWidth: 105,
       },

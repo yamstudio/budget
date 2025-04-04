@@ -3,7 +3,7 @@ import { ColDef, GetRowIdFunc } from 'ag-grid-community'
 import { Api, Income, IncomeCategory, IncomeSource } from './gensrc/Api'
 import { AgGridReact, CustomCellRendererProps } from 'ag-grid-react'
 import AutoCompleteCellEditor from './AutoCompleteCellEditor'
-import ButtonCellRenderer from './ButtonCellRenderer'
+import ButtonCellRenderer, { ButtonCellRendererProps } from './ButtonCellRenderer'
 import { Button, Spin } from 'antd'
 import { format } from 'date-fns'
 
@@ -76,12 +76,16 @@ const Incomes = ({ fromDate, toDate, incomeCategories, incomeSources }: IncomesP
         cellRenderer: ButtonCellRenderer,
         cellRendererParams: {
           text: 'Save',
-          isDisabledGetter: ({ original, date, amount, note, incomeCategoryID, incomeSourceID }: IncomeRow) => {
+          isDisabledGetter: (incomeRow: IncomeRow | undefined) => {
+            if (!incomeRow) {
+              return true
+            }
+            const { original, date, amount, note, incomeCategoryID, incomeSourceID } = incomeRow
             if (!(date && amount && incomeCategoryID && incomeSourceID)) {
               return true
             }
             return (
-              original &&
+              !!original &&
               date === original.date &&
               amount === original.amount &&
               note === original.note &&
@@ -112,7 +116,7 @@ const Incomes = ({ fromDate, toDate, incomeCategories, incomeSources }: IncomesP
               setIncomeRows((rows) => [...rows.filter((row) => row.incomeID !== incomeID), newData])
             })
           },
-        },
+        } satisfies ButtonCellRendererProps<IncomeRow>,
         minWidth: 95,
         maxWidth: 95,
       },
@@ -122,7 +126,7 @@ const Incomes = ({ fromDate, toDate, incomeCategories, incomeSources }: IncomesP
         cellRenderer: ButtonCellRenderer,
         cellRendererParams: {
           text: 'Delete',
-          isDisabledGetter: () => false,
+          isDisabledGetter: (incomeRow: IncomeRow | undefined) => !incomeRow?.original,
           clickedHandler: ({ data, api }: CustomCellRendererProps<IncomeRow>) => {
             const promise = data!.original ? new Api().api.deleteIncome(data!.incomeID!) : Promise.resolve(void 0)
             promise.then(() => {
@@ -132,7 +136,7 @@ const Incomes = ({ fromDate, toDate, incomeCategories, incomeSources }: IncomesP
               setIncomeRows((rows) => rows.filter(({ incomeID }) => incomeID !== data!.incomeID))
             })
           },
-        },
+        } satisfies ButtonCellRendererProps<IncomeRow>,
         minWidth: 105,
         maxWidth: 105,
       },

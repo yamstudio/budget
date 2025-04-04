@@ -2,13 +2,13 @@ import React from 'react'
 import { Button } from 'antd'
 import { CustomCellRendererProps } from 'ag-grid-react'
 
-type ButtonCellRendererProps<TData> = CustomCellRendererProps<TData> & {
+export type ButtonCellRendererProps<TData> = {
   text: string
   isDisabledGetter: (data: TData | undefined) => boolean
   clickedHandler: (props: CustomCellRendererProps<TData>) => void
 }
 
-const ButtonCellRenderer = <TData,>(props: ButtonCellRendererProps<TData>) => {
+const ButtonCellRenderer = <TData,>(props: CustomCellRendererProps<TData> & ButtonCellRendererProps<TData>) => {
   const { text, isDisabledGetter, clickedHandler, data } = props
   const isDisabled = isDisabledGetter(data)
   return (
