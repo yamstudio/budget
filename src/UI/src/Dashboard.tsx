@@ -3,7 +3,6 @@ import { Api, Expense, ExpenseCategory } from './gensrc/Api'
 import { format, eachMonthOfInterval } from 'date-fns'
 import { ChartDataset, Chart as ChartJS, CategoryScale, Colors, Legend, LinearScale, BarElement, ChartData, Tooltip } from 'chart.js'
 import { Bar } from 'react-chartjs-2'
-import { sum, groupBy, mapValues } from 'lodash-es'
 import { Spin } from 'antd'
 
 ChartJS.register(CategoryScale, Colors, Legend, LinearScale, BarElement, Tooltip)
@@ -37,14 +36,12 @@ const Dashboard = ({ fromDate, toDate, expenseCategories }: DashboardProps) => {
 
   const monthlyAmountAggregatedByCategory: ChartData<'bar', number[], string> = useMemo(() => {
     const labels = eachMonthOfInterval({ start: fromDate, end: toDate }).map((month) => format(month, 'yyyy-MM'))
-    const categoryIDToMonthToSum = mapValues(
-      groupBy(expenses, (expense) => expense.expenseCategoryID),
-      (expensesInCategory) =>
-        mapValues(
-          groupBy(expensesInCategory, ({ date }) => date?.substring(0, 7)),
-          (expensesInCategoryAndMonth) => sum(expensesInCategoryAndMonth.map((expense) => expense.amount))
-        )
-    )
+    const categoryIDToMonthToSum: Record<number, Record<string, number>> = {}
+    for (const { expenseCategoryID, date, amount } of expenses) {
+      const month = date!.substring(0, 7)
+      categoryIDToMonthToSum[expenseCategoryID!] = categoryIDToMonthToSum[expenseCategoryID!] || {}
+      categoryIDToMonthToSum[expenseCategoryID!][month] = (categoryIDToMonthToSum[expenseCategoryID!][month] || 0) + amount!
+    }
     const datasets: ChartDataset<'bar', number[]>[] = Object.entries(categoryIDToMonthToSum).map(([expenseCategoryID, monthToSum]) => ({
       expenseCategoryID,
       label: expenseCategories.find((category) => category.expenseCategoryID === +expenseCategoryID)!.displayName!,

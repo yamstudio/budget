@@ -3,7 +3,7 @@ name: Build and deploy Budget app to Azure
 env:
   AZURE_WEBAPP_NAME: belfastweb
   AZURE_WEBAPP_PACKAGE_PATH: '.'
-  DOTNET_VERSION: '8'
+  DOTNET_VERSION: '9'
   NODE_VERSION: '22.x'
 
 on:

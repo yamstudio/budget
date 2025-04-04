@@ -147,6 +147,8 @@ public class ApiController : ControllerBase
     )
     {
         return await _context.Incomes
+            .Where(income => income.Date >= fromDate)
+            .Where(income => income.Date <= toDate)
             .ToListAsync();
     }
 
