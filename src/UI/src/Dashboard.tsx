@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react'
-import { Expense } from './gensrc/Api'
+import { ExpenseSummaryPeriod } from './gensrc/Api'
 import { format, eachMonthOfInterval } from 'date-fns'
 import { ChartDataset, Chart as ChartJS, CategoryScale, Colors, Legend, LinearScale, BarElement, ChartData, Tooltip } from 'chart.js'
 import { Bar } from 'react-chartjs-2'
@@ -23,26 +23,27 @@ const Dashboard = ({ fromDate, toDate }: DashboardProps) => {
       </div>
     )
   }
-  const [expenses, setExpenses] = useState<Expense[]>([])
+  const [expenseSummaryPeriods, setExpenseSummaryPeriods] = useState<ExpenseSummaryPeriod[]>([])
   useEffect(() => {
     if (!expenseCategories.length) {
       return
     }
     api
-      .getExpenses({
+      .getExpenseSummary({
         fromDate: format(fromDate, 'yyyy-MM-dd'),
         toDate: format(toDate, 'yyyy-MM-dd'),
+        aggregateExpenseCategoryID: false,
       })
-      .then(({ data }) => setExpenses(data))
+      .then(({ data }) => setExpenseSummaryPeriods(data.periods || []))
   }, [fromDate, toDate, expenseCategories])
 
   const monthlyAmountAggregatedByCategory: ChartData<'bar', number[], string> = useMemo(() => {
     const labels = eachMonthOfInterval({ start: fromDate, end: toDate }).map((month) => format(month, 'yyyy-MM'))
     const categoryIDToMonthToSum: Record<number, Record<string, number>> = {}
-    for (const { expenseCategoryID, date, amount } of expenses) {
-      const month = date!.substring(0, 7)
+    for (const { expenseCategoryID, fromDate, amount } of expenseSummaryPeriods) {
+      const month = fromDate!.substring(0, 7)
       categoryIDToMonthToSum[expenseCategoryID!] = categoryIDToMonthToSum[expenseCategoryID!] || {}
-      categoryIDToMonthToSum[expenseCategoryID!][month] = (categoryIDToMonthToSum[expenseCategoryID!][month] || 0) + amount!
+      categoryIDToMonthToSum[expenseCategoryID!][month] = amount
     }
     const datasets: ChartDataset<'bar', number[]>[] = Object.entries(categoryIDToMonthToSum).map(([expenseCategoryID, monthToSum]) => ({
       expenseCategoryID,
@@ -53,7 +54,7 @@ const Dashboard = ({ fromDate, toDate }: DashboardProps) => {
       labels,
       datasets,
     }
-  }, [expenses, fromDate, toDate, expenseCategories])
+  }, [expenseSummaryPeriods, fromDate, toDate, expenseCategories])
 
   return (
     <>
