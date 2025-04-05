@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo, useContext } from 'react'
 import { ColDef, GetRowIdFunc } from 'ag-grid-community'
-import { Income } from './gensrc/Api'
 import { AgGridReact, CustomCellRendererProps } from 'ag-grid-react'
-import AutoCompleteCellEditor from './AutoCompleteCellEditor'
-import ButtonCellRenderer, { ButtonCellRendererProps } from './ButtonCellRenderer'
 import { Button, Spin } from 'antd'
 import { format } from 'date-fns'
+import AutoCompleteCellEditor from './AutoCompleteCellEditor'
+import ButtonCellRenderer, { ButtonCellRendererProps } from './ButtonCellRenderer'
 import { ApiContext, IncomeCategoriesContext, IncomeSourcesContext } from './Context'
+import { Income } from './gensrc/Api'
 
 type IncomesProps = {
   fromDate: Date
@@ -21,34 +21,27 @@ const Incomes = ({ fromDate, toDate }: IncomesProps) => {
   const incomeApi = useContext(ApiContext)
   const { incomeCategories } = useContext(IncomeCategoriesContext)
   const { incomeSources } = useContext(IncomeSourcesContext)
-  if (!incomeApi || !incomeCategories || !incomeSources) {
-    return (
-      <div style={{ display: 'flex', flex: 1, flexDirection: 'column' }}>
-        <Spin size="large" />
-      </div>
-    )
-  }
   const incomeCategoryIDToDisplayName: { [key: string]: string } = useMemo(
     () =>
-      incomeCategories.reduce(
+      incomeCategories?.reduce(
         (accumulator, { incomeCategoryID, displayName }) => ({
           ...accumulator,
           [incomeCategoryID!]: displayName,
         }),
         {} as { [key: string]: string }
-      ),
+      ) ?? {},
     [incomeCategories]
   )
 
   const incomeSourceIDToDisplayName: { [key: string]: string } = useMemo(
     () =>
-      incomeSources.reduce(
+      incomeSources?.reduce(
         (accumulator, { incomeSourceID, displayName }) => ({
           ...accumulator,
           [incomeSourceID!]: displayName,
         }),
         {} as { [key: string]: string }
-      ),
+      ) ?? {},
     [incomeSources]
   )
 
@@ -56,7 +49,7 @@ const Incomes = ({ fromDate, toDate }: IncomesProps) => {
   const [nextIncomeID, setNextIncomeID] = useState<number>(-1)
   useEffect(() => {
     incomeApi
-      .getIncomes({
+      ?.getIncomes({
         fromDate: format(fromDate, 'yyyy-MM-dd'),
         toDate: format(toDate, 'yyyy-MM-dd'),
       })
@@ -68,7 +61,7 @@ const Incomes = ({ fromDate, toDate }: IncomesProps) => {
           }))
         )
       )
-  }, [fromDate, toDate])
+  }, [incomeApi, fromDate, toDate])
 
   const colDefs: ColDef<IncomeRow>[] = useMemo(
     () => [
@@ -96,6 +89,9 @@ const Incomes = ({ fromDate, toDate }: IncomesProps) => {
             )
           },
           clickedHandler: ({ data, api }: CustomCellRendererProps<IncomeRow>) => {
+            if (!incomeApi) {
+              return
+            }
             const { original, date, amount, note, incomeCategoryID, incomeSourceID, incomeID } = data!
             const payload: Income = {
               incomeID: 0,
@@ -130,6 +126,9 @@ const Incomes = ({ fromDate, toDate }: IncomesProps) => {
           text: 'Delete',
           isDisabledGetter: (incomeRow: IncomeRow | undefined) => !incomeRow?.original,
           clickedHandler: ({ data, api }: CustomCellRendererProps<IncomeRow>) => {
+            if (!incomeApi) {
+              return
+            }
             const promise = data!.original ? incomeApi.deleteIncome(data!.incomeID!) : Promise.resolve(void 0)
             promise.then(() => {
               api.applyTransaction({
@@ -188,6 +187,14 @@ const Incomes = ({ fromDate, toDate }: IncomesProps) => {
       },
     ])
     setNextIncomeID(nextIncomeID - 1)
+  }
+
+  if (!incomeApi || !incomeCategories || !incomeSources) {
+    return (
+      <div style={{ display: 'flex', flex: 1, flexDirection: 'column' }}>
+        <Spin size="large" />
+      </div>
+    )
   }
 
   return (

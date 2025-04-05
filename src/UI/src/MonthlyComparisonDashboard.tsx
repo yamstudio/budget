@@ -1,43 +1,37 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react'
-import { ExpenseSummaryPeriod } from './gensrc/Api'
-import { format, eachMonthOfInterval } from 'date-fns'
-import { ChartDataset, Chart as ChartJS, CategoryScale, Colors, Legend, LinearScale, BarElement, ChartData, Tooltip } from 'chart.js'
-import { Bar } from 'react-chartjs-2'
 import { Spin } from 'antd'
+import { ChartDataset, Chart as ChartJS, CategoryScale, Legend, LinearScale, BarElement, ChartData, Tooltip } from 'chart.js'
+import { format, eachMonthOfInterval } from 'date-fns'
+import { Bar } from 'react-chartjs-2'
+import Colors from './Colors'
 import { ApiContext, ExpenseCategoriesContext } from './Context'
+import { ExpenseSummaryPeriod } from './gensrc/Api'
 
 ChartJS.register(CategoryScale, Colors, Legend, LinearScale, BarElement, Tooltip)
 
-type DashboardProps = {
+type MonthlyComparisonDashboardProps = {
   fromDate: Date
   toDate: Date
 }
 
-const Dashboard = ({ fromDate, toDate }: DashboardProps) => {
+const MonthlyComparisonDashboard = ({ fromDate, toDate }: MonthlyComparisonDashboardProps) => {
   const api = useContext(ApiContext)
   const { expenseCategories } = useContext(ExpenseCategoriesContext)
-  if (!api || !expenseCategories) {
-    return (
-      <div style={{ display: 'flex', flex: 1, flexDirection: 'column' }}>
-        <Spin size="large" />
-      </div>
-    )
-  }
-  const [expenseSummaryPeriods, setExpenseSummaryPeriods] = useState<ExpenseSummaryPeriod[]>([])
+  const [expenseSummaryPeriods, setExpenseSummaryPeriods] = useState<ExpenseSummaryPeriod[] | undefined>(undefined)
   useEffect(() => {
-    if (!expenseCategories.length) {
-      return
-    }
     api
-      .getExpenseSummary({
+      ?.getExpenseSummary({
         fromDate: format(fromDate, 'yyyy-MM-dd'),
         toDate: format(toDate, 'yyyy-MM-dd'),
         aggregateExpenseCategoryID: false,
       })
       .then(({ data }) => setExpenseSummaryPeriods(data.periods || []))
-  }, [fromDate, toDate, expenseCategories])
+  }, [fromDate, toDate, api])
 
   const monthlyAmountAggregatedByCategory: ChartData<'bar', number[], string> = useMemo(() => {
+    if (!expenseCategories || !expenseSummaryPeriods) {
+      return { labels: [], datasets: [] }
+    }
     const labels = eachMonthOfInterval({ start: fromDate, end: toDate }).map((month) => format(month, 'yyyy-MM'))
     const categoryIDToMonthToSum: Record<number, Record<string, number>> = {}
     for (const { expenseCategoryID, fromDate, amount } of expenseSummaryPeriods) {
@@ -45,21 +39,30 @@ const Dashboard = ({ fromDate, toDate }: DashboardProps) => {
       categoryIDToMonthToSum[expenseCategoryID!] = categoryIDToMonthToSum[expenseCategoryID!] || {}
       categoryIDToMonthToSum[expenseCategoryID!][month] = amount
     }
-    const datasets: ChartDataset<'bar', number[]>[] = Object.entries(categoryIDToMonthToSum).map(([expenseCategoryID, monthToSum]) => ({
-      expenseCategoryID,
-      label: expenseCategories.find((category) => category.expenseCategoryID === +expenseCategoryID)!.displayName!,
-      data: labels.map((month) => monthToSum[month] || 0),
-    }))
+    const datasets: ChartDataset<'bar', number[]>[] = Object.entries(categoryIDToMonthToSum)
+      .map(([expenseCategoryID, monthToSum]) => ({
+        label: expenseCategories.find((category) => category.expenseCategoryID === +expenseCategoryID)!.displayName!,
+        data: labels.map((month) => monthToSum[month] || 0),
+      }))
+      .toSorted((a, b) => a.label!.localeCompare(b.label!))
     return {
       labels,
       datasets,
     }
   }, [expenseSummaryPeriods, fromDate, toDate, expenseCategories])
 
+  if (!expenseSummaryPeriods || !expenseCategories) {
+    return (
+      <div style={{ display: 'flex', flex: 1, flexDirection: 'column' }}>
+        <Spin size="large" />
+      </div>
+    )
+  }
+
   return (
     <>
       <Bar
-        datasetIdKey="expenseCategoryID"
+        datasetIdKey="label"
         data={monthlyAmountAggregatedByCategory}
         options={{
           responsive: true,
@@ -94,4 +97,4 @@ const Dashboard = ({ fromDate, toDate }: DashboardProps) => {
   )
 }
 
-export default Dashboard
+export default MonthlyComparisonDashboard
