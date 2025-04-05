@@ -4,7 +4,7 @@ using YamStudio.Budget.WebApi.Data;
 
 namespace YamStudio.Budget.WebApi.Controllers;
 
-[Route("budgets", Name = "Budget API")]
+[Route("api/budgets", Name = "Budget API")]
 [ApiController]
 public class BudgetApiController : ControllerBase
 {

@@ -1,15 +1,14 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useContext } from 'react'
 import { ColDef, GetRowIdFunc } from 'ag-grid-community'
-import { Api, Income, IncomeCategory, IncomeSource } from './gensrc/Api'
+import { Income } from './gensrc/Api'
 import { AgGridReact, CustomCellRendererProps } from 'ag-grid-react'
 import AutoCompleteCellEditor from './AutoCompleteCellEditor'
 import ButtonCellRenderer, { ButtonCellRendererProps } from './ButtonCellRenderer'
 import { Button, Spin } from 'antd'
 import { format } from 'date-fns'
+import { ApiContext, IncomeCategoriesContext, IncomeSourcesContext } from './Context'
 
 type IncomesProps = {
-  incomeCategories: IncomeCategory[] | undefined
-  incomeSources: IncomeSource[] | undefined
   fromDate: Date
   toDate: Date
 }
@@ -18,8 +17,11 @@ type IncomeRow = Omit<Income, 'incomeCategory' | 'incomeSource'> & {
   original: Income | undefined
 }
 
-const Incomes = ({ fromDate, toDate, incomeCategories, incomeSources }: IncomesProps) => {
-  if (!incomeCategories || !incomeSources) {
+const Incomes = ({ fromDate, toDate }: IncomesProps) => {
+  const incomeApi = useContext(ApiContext)
+  const { incomeCategories } = useContext(IncomeCategoriesContext)
+  const { incomeSources } = useContext(IncomeSourcesContext)
+  if (!incomeApi || !incomeCategories || !incomeSources) {
     return (
       <div style={{ display: 'flex', flex: 1, flexDirection: 'column' }}>
         <Spin size="large" />
@@ -53,7 +55,7 @@ const Incomes = ({ fromDate, toDate, incomeCategories, incomeSources }: IncomesP
   const [incomeRows, setIncomeRows] = useState<IncomeRow[]>([])
   const [nextIncomeID, setNextIncomeID] = useState<number>(-1)
   useEffect(() => {
-    new Api().api
+    incomeApi
       .getIncomes({
         fromDate: format(fromDate, 'yyyy-MM-dd'),
         toDate: format(toDate, 'yyyy-MM-dd'),
@@ -103,7 +105,7 @@ const Incomes = ({ fromDate, toDate, incomeCategories, incomeSources }: IncomesP
               amount,
               note,
             }
-            const promise = original ? new Api().api.updateIncome(incomeID!, payload) : new Api().api.createIncome(payload)
+            const promise = original ? incomeApi.updateIncome(incomeID!, payload) : incomeApi.createIncome(payload)
             promise.then((response) => {
               const newData: IncomeRow = {
                 ...response.data,
@@ -128,7 +130,7 @@ const Incomes = ({ fromDate, toDate, incomeCategories, incomeSources }: IncomesP
           text: 'Delete',
           isDisabledGetter: (incomeRow: IncomeRow | undefined) => !incomeRow?.original,
           clickedHandler: ({ data, api }: CustomCellRendererProps<IncomeRow>) => {
-            const promise = data!.original ? new Api().api.deleteIncome(data!.incomeID!) : Promise.resolve(void 0)
+            const promise = data!.original ? incomeApi.deleteIncome(data!.incomeID!) : Promise.resolve(void 0)
             promise.then(() => {
               api.applyTransaction({
                 remove: [data!],

@@ -1,20 +1,22 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { Api, Expense, ExpenseCategory } from './gensrc/Api'
+import React, { useContext, useEffect, useMemo, useState } from 'react'
+import { Expense } from './gensrc/Api'
 import { format, eachMonthOfInterval } from 'date-fns'
 import { ChartDataset, Chart as ChartJS, CategoryScale, Colors, Legend, LinearScale, BarElement, ChartData, Tooltip } from 'chart.js'
 import { Bar } from 'react-chartjs-2'
 import { Spin } from 'antd'
+import { ApiContext, ExpenseCategoriesContext } from './Context'
 
 ChartJS.register(CategoryScale, Colors, Legend, LinearScale, BarElement, Tooltip)
 
 type DashboardProps = {
-  expenseCategories: ExpenseCategory[] | undefined
   fromDate: Date
   toDate: Date
 }
 
-const Dashboard = ({ fromDate, toDate, expenseCategories }: DashboardProps) => {
-  if (!expenseCategories) {
+const Dashboard = ({ fromDate, toDate }: DashboardProps) => {
+  const api = useContext(ApiContext)
+  const { expenseCategories } = useContext(ExpenseCategoriesContext)
+  if (!api || !expenseCategories) {
     return (
       <div style={{ display: 'flex', flex: 1, flexDirection: 'column' }}>
         <Spin size="large" />
@@ -26,7 +28,7 @@ const Dashboard = ({ fromDate, toDate, expenseCategories }: DashboardProps) => {
     if (!expenseCategories.length) {
       return
     }
-    new Api().api
+    api
       .getExpenses({
         fromDate: format(fromDate, 'yyyy-MM-dd'),
         toDate: format(toDate, 'yyyy-MM-dd'),

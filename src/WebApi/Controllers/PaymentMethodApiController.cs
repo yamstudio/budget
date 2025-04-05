@@ -5,7 +5,7 @@ using YamStudio.Budget.WebApi.Models;
 
 namespace YamStudio.Budget.WebApi.Controllers;
 
-[Route("payment-methods", Name = "Payment Method API")]
+[Route("api/payment-methods", Name = "Payment Method API")]
 [ApiController]
 public class PaymentMethodApiController : ControllerBase
 {

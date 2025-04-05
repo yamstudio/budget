@@ -5,7 +5,7 @@ using YamStudio.Budget.WebApi.Models;
 
 namespace YamStudio.Budget.WebApi.Controllers;
 
-[Route("vendors", Name = "Vendor API")]
+[Route("api/vendors", Name = "Vendor API")]
 [ApiController]
 public class VendorApiController : ControllerBase
 {

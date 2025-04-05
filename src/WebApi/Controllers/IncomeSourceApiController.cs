@@ -5,7 +5,7 @@ using YamStudio.Budget.WebApi.Models;
 
 namespace YamStudio.Budget.WebApi.Controllers;
 
-[Route("income-sources", Name = "Income Source API")]
+[Route("api/income-sources", Name = "Income Source API")]
 [ApiController]
 public class IncomeSourceApiController : ControllerBase
 {

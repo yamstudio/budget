@@ -1,18 +1,14 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useContext } from 'react'
 import { ColDef, GetRowIdFunc } from 'ag-grid-community'
-import { Api, Expense, ExpenseCategory, PaymentMethod, Vendor } from './gensrc/Api'
+import { Expense } from './gensrc/Api'
 import { AgGridReact, CustomCellRendererProps } from 'ag-grid-react'
 import AutoCompleteCellEditor from './AutoCompleteCellEditor'
 import ButtonCellRenderer, { ButtonCellRendererProps } from './ButtonCellRenderer'
 import { Button, Spin } from 'antd'
 import { format } from 'date-fns'
+import { ApiContext, ExpenseCategoriesContext, PaymentMethodsContext, VendorsContext } from './Context'
 
 type ExpensesProps = {
-  expenseCategories: ExpenseCategory[] | undefined
-  vendors: Vendor[] | undefined
-  addVendor: (vendorDisplayName: string) => Promise<Vendor>
-  paymentMethods: PaymentMethod[] | undefined
-  addPaymentMethod: (paymentMethodDisplayName: string) => Promise<PaymentMethod>
   fromDate: Date
   toDate: Date
 }
@@ -21,8 +17,12 @@ type ExpenseRow = Omit<Expense, 'expenseCategory' | 'vendor' | 'paymentMethod'> 
   original: Expense | undefined
 }
 
-const Expenses = ({ fromDate, toDate, expenseCategories, vendors, addVendor, paymentMethods, addPaymentMethod }: ExpensesProps) => {
-  if (!expenseCategories || !vendors || !paymentMethods) {
+const Expenses = ({ fromDate, toDate }: ExpensesProps) => {
+  const expenseApi = useContext(ApiContext)
+  const { expenseCategories } = useContext(ExpenseCategoriesContext)
+  const { vendors, addVendor } = useContext(VendorsContext)
+  const { paymentMethods, addPaymentMethod } = useContext(PaymentMethodsContext)
+  if (!expenseApi || !expenseCategories || !vendors || !paymentMethods) {
     return (
       <div style={{ display: 'flex', flex: 1, flexDirection: 'column' }}>
         <Spin size="large" />
@@ -68,7 +68,7 @@ const Expenses = ({ fromDate, toDate, expenseCategories, vendors, addVendor, pay
   const [expenseRows, setExpenseRows] = useState<ExpenseRow[]>([])
   const [nextExpenseID, setNextExpenseID] = useState<number>(-1)
   useEffect(() => {
-    new Api().api
+    expenseApi
       .getExpenses({
         fromDate: format(fromDate, 'yyyy-MM-dd'),
         toDate: format(toDate, 'yyyy-MM-dd'),
@@ -120,7 +120,7 @@ const Expenses = ({ fromDate, toDate, expenseCategories, vendors, addVendor, pay
               amount,
               note,
             }
-            const promise = original ? new Api().api.updateExpense(expenseID!, payload) : new Api().api.createExpense(payload)
+            const promise = original ? expenseApi.updateExpense(expenseID!, payload) : expenseApi.createExpense(payload)
             promise.then((response) => {
               const newData: ExpenseRow = {
                 ...response.data,
@@ -145,7 +145,7 @@ const Expenses = ({ fromDate, toDate, expenseCategories, vendors, addVendor, pay
           text: 'Delete',
           isDisabledGetter: (expenseRow: ExpenseRow | undefined) => !expenseRow?.original,
           clickedHandler: ({ data, api }: CustomCellRendererProps<ExpenseRow>) => {
-            const promise = data!.original ? new Api().api.deleteExpense(data!.expenseID!) : Promise.resolve(void 0)
+            const promise = data!.original ? expenseApi.deleteExpense(data!.expenseID!) : Promise.resolve(void 0)
             promise.then(() => {
               api.applyTransaction({
                 remove: [data!],
