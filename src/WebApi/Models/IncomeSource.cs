@@ -7,7 +7,7 @@ public class IncomeSource {
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int IncomeSourceID { get; set; }
     [StringLength(64)]
-    public string DisplayName { get; set; }
+    public required string DisplayName { get; set; }
     [StringLength(256)]
-    public string Description { get; set; }
+    public required string Description { get; set; }
 }
