@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.EntityFrameworkCore;
@@ -92,5 +93,50 @@ public class ExpenseApiController : ControllerBase
         _context.Remove(expenseToDelete);
         await _context.SaveChangesAsync();
         return expenseToDelete;
+    }
+
+    [HttpGet("summary", Name = "Get Expense Summary")]
+    public ExpenseSummary GetExpenseSummary(
+        [BindRequired, FromQuery(Name = "fromDate")] DateOnly fromDate,
+        [BindRequired, FromQuery(Name = "toDate")] DateOnly toDate,
+        [FromQuery(Name = "aggregateExpenseCategoryID")] bool aggregateExpenseCategory
+    )
+    {
+        var periods = (
+            from expense in _context.Expenses
+            where expense.Date >= fromDate
+            where expense.Date <= toDate
+            group expense by new
+            {
+                expense.Date.Year,
+                expense.Date.Month,
+                ExpenseCategoryID = aggregateExpenseCategory ? -1 : expense.ExpenseCategoryID,
+            } into g
+            select new
+            {
+                g.Key.Year,
+                g.Key.Month,
+                Amount = g.Sum(e => e.Amount),
+                g.Key.ExpenseCategoryID,
+            }
+        )
+            .AsEnumerable()
+            .Select(g =>
+            {
+                DateOnly monthStart = new(g.Year, g.Month, 1);
+                DateOnly monthEnd = monthStart.AddMonths(1).AddDays(-1);
+                return new ExpenseSummaryPeriod
+                {
+                    FromDate = monthStart < fromDate ? fromDate : monthStart,
+                    ToDate = monthEnd > toDate ? toDate : monthEnd,
+                    Amount = g.Amount,
+                    ExpenseCategoryID = aggregateExpenseCategory ? null : g.ExpenseCategoryID,
+                };
+            })
+        .ToImmutableList();
+        return new ExpenseSummary
+        {
+            Periods = periods,
+        };
     }
 }
