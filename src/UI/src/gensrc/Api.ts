@@ -62,6 +62,21 @@ export interface ExpenseCategory {
   description: string | null
 }
 
+export interface ExpenseSummary {
+  periods: ExpenseSummaryPeriod[] | null
+}
+
+export interface ExpenseSummaryPeriod {
+  /** @format date */
+  fromDate: string
+  /** @format date */
+  toDate: string
+  /** @format double */
+  amount: number
+  /** @format int32 */
+  expenseCategoryID?: number | null
+}
+
 export interface Income {
   /** @format int32 */
   incomeID?: number
@@ -355,7 +370,71 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags BudgetApi
+     * @name GetBudgets
+     * @request GET:/api/budgets
+     */
+    getBudgets: (params: RequestParams = {}) =>
+      this.request<Budget[], any>({
+        path: `/api/budgets`,
+        method: 'GET',
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags BudgetApi
+     * @name CreateBudget
+     * @request POST:/api/budgets
+     */
+    createBudget: (data: Budget, params: RequestParams = {}) =>
+      this.request<Budget, any>({
+        path: `/api/budgets`,
+        method: 'POST',
+        body: data,
+        type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags BudgetApi
+     * @name UpdateBudget
+     * @request PUT:/api/budgets/{budgetId}
+     */
+    updateBudget: (budgetId: number, data: Budget, params: RequestParams = {}) =>
+      this.request<Budget, any>({
+        path: `/api/budgets/${budgetId}`,
+        method: 'PUT',
+        body: data,
+        type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags BudgetApi
+     * @name DeleteBudget
+     * @request DELETE:/api/budgets/{budgetId}
+     */
+    deleteBudget: (budgetId: number, params: RequestParams = {}) =>
+      this.request<Budget, any>({
+        path: `/api/budgets/${budgetId}`,
+        method: 'DELETE',
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ExpenseApi
      * @name GetExpenses
      * @request GET:/api/expenses
      */
@@ -379,7 +458,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags ExpenseApi
      * @name CreateExpense
      * @request POST:/api/expenses
      */
@@ -396,7 +475,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags ExpenseApi
      * @name UpdateExpense
      * @request PUT:/api/expenses/{expenseId}
      */
@@ -413,7 +492,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags ExpenseApi
      * @name DeleteExpense
      * @request DELETE:/api/expenses/{expenseId}
      */
@@ -428,7 +507,32 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags ExpenseApi
+     * @name GetExpenseSummary
+     * @request GET:/api/expenses/summary
+     */
+    getExpenseSummary: (
+      query: {
+        /** @format date */
+        fromDate: string
+        /** @format date */
+        toDate: string
+        aggregateExpenseCategoryID?: boolean
+      },
+      params: RequestParams = {}
+    ) =>
+      this.request<ExpenseSummary, any>({
+        path: `/api/expenses/summary`,
+        method: 'GET',
+        query: query,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ExpenseCategoryApi
      * @name GetExpenseCategories
      * @request GET:/api/expense-categories
      */
@@ -443,7 +547,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags ExpenseCategoryApi
      * @name CreateExpenseCategory
      * @request POST:/api/expense-categories
      */
@@ -460,7 +564,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags ExpenseCategoryApi
      * @name UpdateExpenseCategory
      * @request PUT:/api/expense-categories/{expenseCategoryId}
      */
@@ -477,7 +581,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags ExpenseCategoryApi
      * @name DeleteExpenseCategory
      * @request DELETE:/api/expense-categories/{expenseCategoryId}
      */
@@ -492,7 +596,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags IncomeApi
      * @name GetIncomes
      * @request GET:/api/incomes
      */
@@ -516,7 +620,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags IncomeApi
      * @name CreateIncome
      * @request POST:/api/incomes
      */
@@ -533,7 +637,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags IncomeApi
      * @name UpdateIncome
      * @request PUT:/api/incomes/{incomeId}
      */
@@ -550,7 +654,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags IncomeApi
      * @name DeleteIncome
      * @request DELETE:/api/incomes/{incomeId}
      */
@@ -565,7 +669,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags IncomeCategoryApi
      * @name GetIncomeCategories
      * @request GET:/api/income-categories
      */
@@ -580,7 +684,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags IncomeCategoryApi
      * @name CreateIncomeCategory
      * @request POST:/api/income-categories
      */
@@ -597,7 +701,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags IncomeCategoryApi
      * @name UpdateIncomeCategory
      * @request PUT:/api/income-categories/{incomeCategoryId}
      */
@@ -614,7 +718,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags IncomeCategoryApi
      * @name DeleteIncomeCategory
      * @request DELETE:/api/income-categories/{incomeCategoryId}
      */
@@ -629,7 +733,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags IncomeSourceApi
      * @name GetIncomeSources
      * @request GET:/api/income-sources
      */
@@ -644,7 +748,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags IncomeSourceApi
      * @name CreateIncomeSource
      * @request POST:/api/income-sources
      */
@@ -661,7 +765,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags IncomeSourceApi
      * @name UpdateIncomeSource
      * @request PUT:/api/income-sources/{incomeSourceId}
      */
@@ -678,7 +782,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags IncomeSourceApi
      * @name DeleteIncomeSource
      * @request DELETE:/api/income-sources/{incomeSourceId}
      */
@@ -693,7 +797,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags PaymentMethodApi
      * @name GetPaymentMethods
      * @request GET:/api/payment-methods
      */
@@ -708,7 +812,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags PaymentMethodApi
      * @name CreatePaymentMethod
      * @request POST:/api/payment-methods
      */
@@ -725,7 +829,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags PaymentMethodApi
      * @name UpdatePaymentMethod
      * @request PUT:/api/payment-methods/{paymentMethodId}
      */
@@ -742,7 +846,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags PaymentMethodApi
      * @name DeletePaymentMethod
      * @request DELETE:/api/payment-methods/{paymentMethodId}
      */
@@ -757,7 +861,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags VendorApi
      * @name GetVendors
      * @request GET:/api/vendors
      */
@@ -772,7 +876,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags VendorApi
      * @name CreateVendor
      * @request POST:/api/vendors
      */
@@ -789,7 +893,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags VendorApi
      * @name UpdateVendor
      * @request PUT:/api/vendors/{vendorId}
      */
@@ -806,77 +910,13 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags Api
+     * @tags VendorApi
      * @name DeleteVendor
      * @request DELETE:/api/vendors/{vendorId}
      */
     deleteVendor: (vendorId: number, params: RequestParams = {}) =>
       this.request<Vendor, any>({
         path: `/api/vendors/${vendorId}`,
-        method: 'DELETE',
-        format: 'json',
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Api
-     * @name GetBudgets
-     * @request GET:/api/budgets
-     */
-    getBudgets: (params: RequestParams = {}) =>
-      this.request<Budget[], any>({
-        path: `/api/budgets`,
-        method: 'GET',
-        format: 'json',
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Api
-     * @name CreateBudget
-     * @request POST:/api/budgets
-     */
-    createBudget: (data: Budget, params: RequestParams = {}) =>
-      this.request<Budget, any>({
-        path: `/api/budgets`,
-        method: 'POST',
-        body: data,
-        type: ContentType.Json,
-        format: 'json',
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Api
-     * @name UpdateBudget
-     * @request PUT:/api/budgets/{budgetId}
-     */
-    updateBudget: (budgetId: number, data: Budget, params: RequestParams = {}) =>
-      this.request<Budget, any>({
-        path: `/api/budgets/${budgetId}`,
-        method: 'PUT',
-        body: data,
-        type: ContentType.Json,
-        format: 'json',
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Api
-     * @name DeleteBudget
-     * @request DELETE:/api/budgets/{budgetId}
-     */
-    deleteBudget: (budgetId: number, params: RequestParams = {}) =>
-      this.request<Budget, any>({
-        path: `/api/budgets/${budgetId}`,
         method: 'DELETE',
         format: 'json',
         ...params,
