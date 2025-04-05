@@ -396,4 +396,66 @@ public class ApiController : ControllerBase
         await _context.SaveChangesAsync();
         return vendorToDelete;
     }
+
+    [HttpGet("budgets", Name = "Get Budgets")]
+    public async Task<ICollection<Models.Budget>> GetBudgets()
+    {
+        return await _context.Budgets.ToListAsync();
+    }
+
+    [HttpPost("budgets", Name = "Create Budget")]
+    public async Task<Models.Budget> CreateBudget(
+        [Bind(
+            [
+                nameof(Models.Budget.Amount),
+                nameof(Models.Budget.FromDate),
+                nameof(Models.Budget.ToDate),
+                nameof(Models.Budget.ExpenseCategoryID)
+            ]
+        )] Models.Budget budget
+    )
+    {
+        _context.Add(budget);
+        await _context.SaveChangesAsync();
+        return budget;
+    }
+
+    [HttpPut("budgets/{budgetId}", Name = "Update Budget")]
+    public async Task<ActionResult<Models.Budget>> UpdateBudget(
+        int budgetId,
+        [Bind(
+            [
+                nameof(Models.Budget.Amount),
+                nameof(Models.Budget.FromDate),
+                nameof(Models.Budget.ToDate),
+                nameof(Models.Budget.ExpenseCategoryID)
+            ]
+        )] Models.Budget budget
+    )
+    {
+        var budgetToUpdate = await _context.Budgets.FirstOrDefaultAsync(e => e.BudgetID == budgetId);
+        if (budgetToUpdate == null)
+        {
+            return NotFound();
+        }
+        budgetToUpdate.Amount = budget.Amount;
+        budgetToUpdate.FromDate = budget.FromDate;
+        budgetToUpdate.ToDate = budget.ToDate;
+        budgetToUpdate.ExpenseCategoryID = budget.ExpenseCategoryID;
+        await _context.SaveChangesAsync();
+        return budget;
+    }
+
+    [HttpDelete("budgets/{budgetId}", Name = "Delete Budget")]
+    public async Task<ActionResult<Models.Budget>> DeleteBudget(int budgetId)
+    {
+        var budgetToDelete = await _context.Budgets.FirstOrDefaultAsync(e => e.BudgetID == budgetId);
+        if (budgetToDelete == null)
+        {
+            return NotFound();
+        }
+        _context.Remove(budgetToDelete);
+        await _context.SaveChangesAsync();
+        return budgetToDelete;
+    }
 }

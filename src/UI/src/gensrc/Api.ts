@@ -1,5 +1,6 @@
 /* eslint-disable */
 /* tslint:disable */
+// @ts-nocheck
 /*
  * ---------------------------------------------------------------
  * ## THIS FILE WAS GENERATED VIA SWAGGER-TYPESCRIPT-API        ##
@@ -9,181 +10,193 @@
  * ---------------------------------------------------------------
  */
 
+export interface Budget {
+  /** @format int32 */
+  budgetID?: number
+  /** @format int32 */
+  expenseCategoryID?: number
+  /** @format double */
+  amount?: number
+  /** @format date */
+  fromDate: string
+  /** @format date */
+  toDate: string
+  expenseCategory?: ExpenseCategory
+}
+
 export interface Expense {
   /** @format int32 */
-  expenseID?: number;
+  expenseID?: number
   /** @format int32 */
-  expenseCategoryID?: number;
+  expenseCategoryID?: number
   /** @format int32 */
-  vendorID?: number;
+  vendorID?: number
   /** @format int32 */
-  paymentMethodID?: number;
+  paymentMethodID?: number
   /** @format double */
-  amount?: number;
+  amount?: number
   /** @format date */
-  date?: string;
+  date?: string
   /**
    * @minLength 0
    * @maxLength 512
    */
-  note?: string | null;
-  expenseCategory?: ExpenseCategory;
-  vendor?: Vendor;
-  paymentMethod?: PaymentMethod;
+  note?: string | null
+  expenseCategory?: ExpenseCategory
+  vendor?: Vendor
+  paymentMethod?: PaymentMethod
 }
 
 export interface ExpenseCategory {
   /** @format int32 */
-  expenseCategoryID?: number;
+  expenseCategoryID?: number
   /**
    * @minLength 0
    * @maxLength 64
    */
-  displayName?: string | null;
+  displayName: string | null
   /**
    * @minLength 0
    * @maxLength 256
    */
-  description?: string | null;
+  description: string | null
 }
 
 export interface Income {
   /** @format int32 */
-  incomeID?: number;
+  incomeID?: number
   /** @format int32 */
-  incomeCategoryID?: number;
+  incomeCategoryID?: number
   /** @format int32 */
-  incomeSourceID?: number;
+  incomeSourceID?: number
   /** @format double */
-  amount?: number;
+  amount?: number
   /** @format date */
-  date?: string;
+  date?: string
   /**
    * @minLength 0
    * @maxLength 512
    */
-  note?: string | null;
-  incomeCategory?: IncomeCategory;
-  incomeSource?: IncomeSource;
+  note?: string | null
+  incomeCategory?: IncomeCategory
+  incomeSource?: IncomeSource
 }
 
 export interface IncomeCategory {
   /** @format int32 */
-  incomeCategoryID?: number;
+  incomeCategoryID?: number
   /**
    * @minLength 0
    * @maxLength 64
    */
-  displayName?: string | null;
+  displayName: string | null
   /**
    * @minLength 0
    * @maxLength 256
    */
-  description?: string | null;
+  description: string | null
 }
 
 export interface IncomeSource {
   /** @format int32 */
-  incomeSourceID?: number;
+  incomeSourceID?: number
   /**
    * @minLength 0
    * @maxLength 64
    */
-  displayName?: string | null;
+  displayName: string | null
   /**
    * @minLength 0
    * @maxLength 256
    */
-  description?: string | null;
+  description: string | null
 }
 
 export interface PaymentMethod {
   /** @format int32 */
-  paymentMethodID?: number;
+  paymentMethodID?: number
   /**
    * @minLength 0
    * @maxLength 64
    */
-  displayName?: string | null;
+  displayName: string | null
   /**
    * @minLength 0
    * @maxLength 256
    */
-  description?: string | null;
+  description: string | null
 }
 
 export interface Vendor {
   /** @format int32 */
-  vendorID?: number;
+  vendorID?: number
   /**
    * @minLength 0
    * @maxLength 64
    */
-  displayName?: string | null;
+  displayName: string | null
   /**
    * @minLength 0
    * @maxLength 256
    */
-  description?: string | null;
+  description: string | null
 }
 
-import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, HeadersDefaults, ResponseType } from "axios";
-import axios from "axios";
+import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, HeadersDefaults, ResponseType } from 'axios'
+import axios from 'axios'
 
-export type QueryParamsType = Record<string | number, any>;
+export type QueryParamsType = Record<string | number, any>
 
-export interface FullRequestParams extends Omit<AxiosRequestConfig, "data" | "params" | "url" | "responseType"> {
+export interface FullRequestParams extends Omit<AxiosRequestConfig, 'data' | 'params' | 'url' | 'responseType'> {
   /** set parameter to `true` for call `securityWorker` for this request */
-  secure?: boolean;
+  secure?: boolean
   /** request path */
-  path: string;
+  path: string
   /** content type of request body */
-  type?: ContentType;
+  type?: ContentType
   /** query params */
-  query?: QueryParamsType;
+  query?: QueryParamsType
   /** format of response (i.e. response.json() -> format: "json") */
-  format?: ResponseType;
+  format?: ResponseType
   /** request body */
-  body?: unknown;
+  body?: unknown
 }
 
-export type RequestParams = Omit<FullRequestParams, "body" | "method" | "query" | "path">;
+export type RequestParams = Omit<FullRequestParams, 'body' | 'method' | 'query' | 'path'>
 
-export interface ApiConfig<SecurityDataType = unknown> extends Omit<AxiosRequestConfig, "data" | "cancelToken"> {
-  securityWorker?: (
-    securityData: SecurityDataType | null,
-  ) => Promise<AxiosRequestConfig | void> | AxiosRequestConfig | void;
-  secure?: boolean;
-  format?: ResponseType;
+export interface ApiConfig<SecurityDataType = unknown> extends Omit<AxiosRequestConfig, 'data' | 'cancelToken'> {
+  securityWorker?: (securityData: SecurityDataType | null) => Promise<AxiosRequestConfig | void> | AxiosRequestConfig | void
+  secure?: boolean
+  format?: ResponseType
 }
 
 export enum ContentType {
-  Json = "application/json",
-  FormData = "multipart/form-data",
-  UrlEncoded = "application/x-www-form-urlencoded",
-  Text = "text/plain",
+  Json = 'application/json',
+  FormData = 'multipart/form-data',
+  UrlEncoded = 'application/x-www-form-urlencoded',
+  Text = 'text/plain',
 }
 
 export class HttpClient<SecurityDataType = unknown> {
-  public instance: AxiosInstance;
-  private securityData: SecurityDataType | null = null;
-  private securityWorker?: ApiConfig<SecurityDataType>["securityWorker"];
-  private secure?: boolean;
-  private format?: ResponseType;
+  public instance: AxiosInstance
+  private securityData: SecurityDataType | null = null
+  private securityWorker?: ApiConfig<SecurityDataType>['securityWorker']
+  private secure?: boolean
+  private format?: ResponseType
 
   constructor({ securityWorker, secure, format, ...axiosConfig }: ApiConfig<SecurityDataType> = {}) {
-    this.instance = axios.create({ ...axiosConfig, baseURL: axiosConfig.baseURL || "" });
-    this.secure = secure;
-    this.format = format;
-    this.securityWorker = securityWorker;
+    this.instance = axios.create({ ...axiosConfig, baseURL: axiosConfig.baseURL || '' })
+    this.secure = secure
+    this.format = format
+    this.securityWorker = securityWorker
   }
 
   public setSecurityData = (data: SecurityDataType | null) => {
-    this.securityData = data;
-  };
+    this.securityData = data
+  }
 
   protected mergeRequestParams(params1: AxiosRequestConfig, params2?: AxiosRequestConfig): AxiosRequestConfig {
-    const method = params1.method || (params2 && params2.method);
+    const method = params1.method || (params2 && params2.method)
 
     return {
       ...this.instance.defaults,
@@ -194,29 +207,32 @@ export class HttpClient<SecurityDataType = unknown> {
         ...(params1.headers || {}),
         ...((params2 && params2.headers) || {}),
       },
-    };
+    }
   }
 
   protected stringifyFormItem(formItem: unknown) {
-    if (typeof formItem === "object" && formItem !== null) {
-      return JSON.stringify(formItem);
+    if (typeof formItem === 'object' && formItem !== null) {
+      return JSON.stringify(formItem)
     } else {
-      return `${formItem}`;
+      return `${formItem}`
     }
   }
 
   protected createFormData(input: Record<string, unknown>): FormData {
+    if (input instanceof FormData) {
+      return input
+    }
     return Object.keys(input || {}).reduce((formData, key) => {
-      const property = input[key];
-      const propertyContent: any[] = property instanceof Array ? property : [property];
+      const property = input[key]
+      const propertyContent: any[] = property instanceof Array ? property : [property]
 
       for (const formItem of propertyContent) {
-        const isFileType = formItem instanceof Blob || formItem instanceof File;
-        formData.append(key, isFileType ? formItem : this.stringifyFormItem(formItem));
+        const isFileType = formItem instanceof Blob || formItem instanceof File
+        formData.append(key, isFileType ? formItem : this.stringifyFormItem(formItem))
       }
 
-      return formData;
-    }, new FormData());
+      return formData
+    }, new FormData())
   }
 
   public request = async <T = any, _E = any>({
@@ -229,33 +245,30 @@ export class HttpClient<SecurityDataType = unknown> {
     ...params
   }: FullRequestParams): Promise<AxiosResponse<T>> => {
     const secureParams =
-      ((typeof secure === "boolean" ? secure : this.secure) &&
-        this.securityWorker &&
-        (await this.securityWorker(this.securityData))) ||
-      {};
-    const requestParams = this.mergeRequestParams(params, secureParams);
-    const responseFormat = format || this.format || undefined;
+      ((typeof secure === 'boolean' ? secure : this.secure) && this.securityWorker && (await this.securityWorker(this.securityData))) || {}
+    const requestParams = this.mergeRequestParams(params, secureParams)
+    const responseFormat = format || this.format || undefined
 
-    if (type === ContentType.FormData && body && body !== null && typeof body === "object") {
-      body = this.createFormData(body as Record<string, unknown>);
+    if (type === ContentType.FormData && body && body !== null && typeof body === 'object') {
+      body = this.createFormData(body as Record<string, unknown>)
     }
 
-    if (type === ContentType.Text && body && body !== null && typeof body !== "string") {
-      body = JSON.stringify(body);
+    if (type === ContentType.Text && body && body !== null && typeof body !== 'string') {
+      body = JSON.stringify(body)
     }
 
     return this.instance.request({
       ...requestParams,
       headers: {
         ...(requestParams.headers || {}),
-        ...(type && type !== ContentType.FormData ? { "Content-Type": type } : {}),
+        ...(type ? { 'Content-Type': type } : {}),
       },
       params: query,
       responseType: responseFormat,
       data: body,
       url: path,
-    });
-  };
+    })
+  }
 }
 
 /**
@@ -274,17 +287,17 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getExpenses: (
       query: {
         /** @format date */
-        fromDate: string;
+        fromDate: string
         /** @format date */
-        toDate: string;
+        toDate: string
       },
-      params: RequestParams = {},
+      params: RequestParams = {}
     ) =>
       this.request<Expense[], any>({
         path: `/api/expenses`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -298,10 +311,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     createExpense: (data: Expense, params: RequestParams = {}) =>
       this.request<Expense, any>({
         path: `/api/expenses`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -315,10 +328,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     updateExpense: (expenseId: number, data: Expense, params: RequestParams = {}) =>
       this.request<Expense, any>({
         path: `/api/expenses/${expenseId}`,
-        method: "PUT",
+        method: 'PUT',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -332,8 +345,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     deleteExpense: (expenseId: number, params: RequestParams = {}) =>
       this.request<Expense, any>({
         path: `/api/expenses/${expenseId}`,
-        method: "DELETE",
-        format: "json",
+        method: 'DELETE',
+        format: 'json',
         ...params,
       }),
 
@@ -347,8 +360,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getExpenseCategories: (params: RequestParams = {}) =>
       this.request<ExpenseCategory[], any>({
         path: `/api/expense-categories`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
 
@@ -362,10 +375,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     createExpenseCategory: (data: ExpenseCategory, params: RequestParams = {}) =>
       this.request<ExpenseCategory, any>({
         path: `/api/expense-categories`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -379,10 +392,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     updateExpenseCategory: (expenseCategoryId: number, data: ExpenseCategory, params: RequestParams = {}) =>
       this.request<ExpenseCategory, any>({
         path: `/api/expense-categories/${expenseCategoryId}`,
-        method: "PUT",
+        method: 'PUT',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -396,8 +409,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     deleteExpenseCategory: (expenseCategoryId: number, params: RequestParams = {}) =>
       this.request<ExpenseCategory, any>({
         path: `/api/expense-categories/${expenseCategoryId}`,
-        method: "DELETE",
-        format: "json",
+        method: 'DELETE',
+        format: 'json',
         ...params,
       }),
 
@@ -411,17 +424,17 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getIncomes: (
       query: {
         /** @format date */
-        fromDate: string;
+        fromDate: string
         /** @format date */
-        toDate: string;
+        toDate: string
       },
-      params: RequestParams = {},
+      params: RequestParams = {}
     ) =>
       this.request<Income[], any>({
         path: `/api/incomes`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -435,10 +448,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     createIncome: (data: Income, params: RequestParams = {}) =>
       this.request<Income, any>({
         path: `/api/incomes`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -452,10 +465,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     updateIncome: (incomeId: number, data: Income, params: RequestParams = {}) =>
       this.request<Income, any>({
         path: `/api/incomes/${incomeId}`,
-        method: "PUT",
+        method: 'PUT',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -469,8 +482,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     deleteIncome: (incomeId: number, params: RequestParams = {}) =>
       this.request<Income, any>({
         path: `/api/incomes/${incomeId}`,
-        method: "DELETE",
-        format: "json",
+        method: 'DELETE',
+        format: 'json',
         ...params,
       }),
 
@@ -484,8 +497,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getIncomeCategories: (params: RequestParams = {}) =>
       this.request<IncomeCategory[], any>({
         path: `/api/income-categories`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
 
@@ -499,10 +512,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     createIncomeCategory: (data: IncomeCategory, params: RequestParams = {}) =>
       this.request<IncomeCategory, any>({
         path: `/api/income-categories`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -516,10 +529,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     updateIncomeCategory: (incomeCategoryId: number, data: IncomeCategory, params: RequestParams = {}) =>
       this.request<IncomeCategory, any>({
         path: `/api/income-categories/${incomeCategoryId}`,
-        method: "PUT",
+        method: 'PUT',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -533,8 +546,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     deleteIncomeCategory: (incomeCategoryId: number, params: RequestParams = {}) =>
       this.request<IncomeCategory, any>({
         path: `/api/income-categories/${incomeCategoryId}`,
-        method: "DELETE",
-        format: "json",
+        method: 'DELETE',
+        format: 'json',
         ...params,
       }),
 
@@ -548,8 +561,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getIncomeSources: (params: RequestParams = {}) =>
       this.request<IncomeSource[], any>({
         path: `/api/income-sources`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
 
@@ -563,10 +576,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     createIncomeSource: (data: IncomeSource, params: RequestParams = {}) =>
       this.request<IncomeSource, any>({
         path: `/api/income-sources`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -580,10 +593,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     updateIncomeSource: (incomeSourceId: number, data: IncomeSource, params: RequestParams = {}) =>
       this.request<IncomeSource, any>({
         path: `/api/income-sources/${incomeSourceId}`,
-        method: "PUT",
+        method: 'PUT',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -597,8 +610,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     deleteIncomeSource: (incomeSourceId: number, params: RequestParams = {}) =>
       this.request<IncomeSource, any>({
         path: `/api/income-sources/${incomeSourceId}`,
-        method: "DELETE",
-        format: "json",
+        method: 'DELETE',
+        format: 'json',
         ...params,
       }),
 
@@ -612,8 +625,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getPaymentMethods: (params: RequestParams = {}) =>
       this.request<PaymentMethod[], any>({
         path: `/api/payment-methods`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
 
@@ -627,10 +640,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     createPaymentMethod: (data: PaymentMethod, params: RequestParams = {}) =>
       this.request<PaymentMethod, any>({
         path: `/api/payment-methods`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -644,10 +657,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     updatePaymentMethod: (paymentMethodId: number, data: PaymentMethod, params: RequestParams = {}) =>
       this.request<PaymentMethod, any>({
         path: `/api/payment-methods/${paymentMethodId}`,
-        method: "PUT",
+        method: 'PUT',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -661,8 +674,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     deletePaymentMethod: (paymentMethodId: number, params: RequestParams = {}) =>
       this.request<PaymentMethod, any>({
         path: `/api/payment-methods/${paymentMethodId}`,
-        method: "DELETE",
-        format: "json",
+        method: 'DELETE',
+        format: 'json',
         ...params,
       }),
 
@@ -676,8 +689,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getVendors: (params: RequestParams = {}) =>
       this.request<Vendor[], any>({
         path: `/api/vendors`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
 
@@ -691,10 +704,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     createVendor: (data: Vendor, params: RequestParams = {}) =>
       this.request<Vendor, any>({
         path: `/api/vendors`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -708,10 +721,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     updateVendor: (vendorId: number, data: Vendor, params: RequestParams = {}) =>
       this.request<Vendor, any>({
         path: `/api/vendors/${vendorId}`,
-        method: "PUT",
+        method: 'PUT',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -725,9 +738,73 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     deleteVendor: (vendorId: number, params: RequestParams = {}) =>
       this.request<Vendor, any>({
         path: `/api/vendors/${vendorId}`,
-        method: "DELETE",
-        format: "json",
+        method: 'DELETE',
+        format: 'json',
         ...params,
       }),
-  };
+
+    /**
+     * No description
+     *
+     * @tags Api
+     * @name GetBudgets
+     * @request GET:/api/budgets
+     */
+    getBudgets: (params: RequestParams = {}) =>
+      this.request<Budget[], any>({
+        path: `/api/budgets`,
+        method: 'GET',
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Api
+     * @name CreateBudget
+     * @request POST:/api/budgets
+     */
+    createBudget: (data: Budget, params: RequestParams = {}) =>
+      this.request<Budget, any>({
+        path: `/api/budgets`,
+        method: 'POST',
+        body: data,
+        type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Api
+     * @name UpdateBudget
+     * @request PUT:/api/budgets/{budgetId}
+     */
+    updateBudget: (budgetId: number, data: Budget, params: RequestParams = {}) =>
+      this.request<Budget, any>({
+        path: `/api/budgets/${budgetId}`,
+        method: 'PUT',
+        body: data,
+        type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Api
+     * @name DeleteBudget
+     * @request DELETE:/api/budgets/{budgetId}
+     */
+    deleteBudget: (budgetId: number, params: RequestParams = {}) =>
+      this.request<Budget, any>({
+        path: `/api/budgets/${budgetId}`,
+        method: 'DELETE',
+        format: 'json',
+        ...params,
+      }),
+  }
 }

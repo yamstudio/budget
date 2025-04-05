@@ -15,6 +15,7 @@ public class BudgetDbContext : DbContext {
     public DbSet<IncomeSource> IncomeSources { get; set; }
     public DbSet<PaymentMethod> PaymentMethods { get; set; }
     public DbSet<Vendor> Vendors { get; set; }
+    public DbSet<Models.Budget> Budgets { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -25,5 +26,6 @@ public class BudgetDbContext : DbContext {
         modelBuilder.Entity<IncomeSource>().ToTable("IncomeSource");
         modelBuilder.Entity<PaymentMethod>().ToTable("PaymentMethod");
         modelBuilder.Entity<Vendor>().ToTable("Vendor");
+        modelBuilder.Entity<Models.Budget>().ToTable("Budget");
     }
 }

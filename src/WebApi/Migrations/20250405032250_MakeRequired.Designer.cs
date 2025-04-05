@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using YamStudio.Budget.WebApi.Data;
 
@@ -11,9 +12,11 @@ using YamStudio.Budget.WebApi.Data;
 namespace YamStudio.Budget.WebApi.Migrations
 {
     [DbContext(typeof(BudgetDbContext))]
-    partial class BudgetDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250405032250_MakeRequired")]
+    partial class MakeRequired
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,38 +24,6 @@ namespace YamStudio.Budget.WebApi.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("YamStudio.Budget.WebApi.Models.Budget", b =>
-                {
-                    b.Property<int>("BudgetID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("BudgetID"));
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("ExpenseCategoryID")
-                        .HasColumnType("int");
-
-                    b.Property<DateOnly>("FromDate")
-                        .HasColumnType("date");
-
-                    b.Property<DateOnly>("ToDate")
-                        .HasColumnType("date");
-
-                    b.HasKey("BudgetID");
-
-                    b.HasIndex("ExpenseCategoryID");
-
-                    b.HasIndex("FromDate");
-
-                    b.HasIndex("ToDate");
-
-                    b.ToTable("Budget", (string)null);
-                });
 
             modelBuilder.Entity("YamStudio.Budget.WebApi.Models.Expense", b =>
                 {
@@ -244,17 +215,6 @@ namespace YamStudio.Budget.WebApi.Migrations
                     b.HasKey("VendorID");
 
                     b.ToTable("Vendor", (string)null);
-                });
-
-            modelBuilder.Entity("YamStudio.Budget.WebApi.Models.Budget", b =>
-                {
-                    b.HasOne("YamStudio.Budget.WebApi.Models.ExpenseCategory", "ExpenseCategory")
-                        .WithMany()
-                        .HasForeignKey("ExpenseCategoryID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ExpenseCategory");
                 });
 
             modelBuilder.Entity("YamStudio.Budget.WebApi.Models.Expense", b =>
