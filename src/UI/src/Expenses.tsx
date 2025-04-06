@@ -114,7 +114,9 @@ const Expenses = ({ fromDate, toDate }: ExpensesProps) => {
               amount,
               note,
             }
-            const promise = original ? expenseApi.updateExpense(expenseID!, payload) : expenseApi.createExpense(payload)
+            const promise = original
+              ? expenseApi.updateExpense(expenseID!, payload, { credentials: 'include' })
+              : expenseApi.createExpense(payload, { credentials: 'include' })
             promise.then((response) => {
               const newData: ExpenseRow = {
                 ...response.data,
@@ -142,7 +144,9 @@ const Expenses = ({ fromDate, toDate }: ExpensesProps) => {
             if (!expenseApi) {
               return
             }
-            const promise = data!.original ? expenseApi.deleteExpense(data!.expenseID!) : Promise.resolve(void 0)
+            const promise = data!.original
+              ? expenseApi.deleteExpense(data!.expenseID!, { credentials: 'include' })
+              : Promise.resolve(void 0)
             promise.then(() => {
               api.applyTransaction({
                 remove: [data!],

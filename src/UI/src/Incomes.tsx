@@ -101,7 +101,9 @@ const Incomes = ({ fromDate, toDate }: IncomesProps) => {
               amount,
               note,
             }
-            const promise = original ? incomeApi.updateIncome(incomeID!, payload) : incomeApi.createIncome(payload)
+            const promise = original
+              ? incomeApi.updateIncome(incomeID!, payload, { credentials: 'include' })
+              : incomeApi.createIncome(payload, { credentials: 'include' })
             promise.then((response) => {
               const newData: IncomeRow = {
                 ...response.data,
@@ -129,7 +131,7 @@ const Incomes = ({ fromDate, toDate }: IncomesProps) => {
             if (!incomeApi) {
               return
             }
-            const promise = data!.original ? incomeApi.deleteIncome(data!.incomeID!) : Promise.resolve(void 0)
+            const promise = data!.original ? incomeApi.deleteIncome(data!.incomeID!, { credentials: 'include' }) : Promise.resolve(void 0)
             promise.then(() => {
               api.applyTransaction({
                 remove: [data!],
