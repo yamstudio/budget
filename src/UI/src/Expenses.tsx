@@ -79,27 +79,27 @@ const Expenses = ({ fromDate, toDate }: ExpensesProps) => {
       {
         colId: 'save',
         headerName: '',
+        valueGetter: ({ data }) => {
+          if (!data) {
+            return false
+          }
+          const { original, date, amount, note, expenseCategoryID, vendorID, paymentMethodID } = data
+          if (!(date && amount && expenseCategoryID && vendorID && paymentMethodID)) {
+            return false
+          }
+          return (
+            !original ||
+            date !== original.date ||
+            amount !== original.amount ||
+            note !== original.note ||
+            expenseCategoryID !== original.expenseCategoryID ||
+            vendorID !== original.vendorID ||
+            paymentMethodID !== original.paymentMethodID
+          )
+        },
         cellRenderer: ButtonCellRenderer,
         cellRendererParams: {
           text: 'Save',
-          isDisabledGetter: (expenseRow: ExpenseRow | undefined) => {
-            if (!expenseRow) {
-              return true
-            }
-            const { original, date, amount, note, expenseCategoryID, vendorID, paymentMethodID } = expenseRow
-            if (!(date && amount && expenseCategoryID && vendorID && paymentMethodID)) {
-              return true
-            }
-            return (
-              !!original &&
-              date === original.date &&
-              amount === original.amount &&
-              note === original.note &&
-              expenseCategoryID === original.expenseCategoryID &&
-              vendorID === original.vendorID &&
-              paymentMethodID === original.paymentMethodID
-            )
-          },
           clickedHandler: ({ data, api }: CustomCellRendererProps<ExpenseRow>) => {
             if (!expenseApi) {
               return
@@ -134,10 +134,11 @@ const Expenses = ({ fromDate, toDate }: ExpensesProps) => {
       {
         colId: 'delete',
         headerName: '',
+        valueGetter: ({ data }) => !!data?.original,
         cellRenderer: ButtonCellRenderer,
         cellRendererParams: {
           text: 'Delete',
-          isDisabledGetter: (expenseRow: ExpenseRow | undefined) => !expenseRow?.original,
+          danger: true,
           clickedHandler: ({ data, api }: CustomCellRendererProps<ExpenseRow>) => {
             if (!expenseApi) {
               return

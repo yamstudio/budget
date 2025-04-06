@@ -68,26 +68,26 @@ const Incomes = ({ fromDate, toDate }: IncomesProps) => {
       {
         colId: 'save',
         headerName: '',
+        valueGetter: ({ data }) => {
+          if (!data) {
+            return false
+          }
+          const { original, date, amount, note, incomeCategoryID, incomeSourceID } = data
+          if (!(date && amount && incomeCategoryID && incomeSourceID)) {
+            return false
+          }
+          return (
+            !original ||
+            date !== original.date ||
+            amount !== original.amount ||
+            note !== original.note ||
+            incomeCategoryID !== original.incomeCategoryID ||
+            incomeSourceID !== original.incomeSourceID
+          )
+        },
         cellRenderer: ButtonCellRenderer,
         cellRendererParams: {
           text: 'Save',
-          isDisabledGetter: (incomeRow: IncomeRow | undefined) => {
-            if (!incomeRow) {
-              return true
-            }
-            const { original, date, amount, note, incomeCategoryID, incomeSourceID } = incomeRow
-            if (!(date && amount && incomeCategoryID && incomeSourceID)) {
-              return true
-            }
-            return (
-              !!original &&
-              date === original.date &&
-              amount === original.amount &&
-              note === original.note &&
-              incomeCategoryID === original.incomeCategoryID &&
-              incomeSourceID === original.incomeSourceID
-            )
-          },
           clickedHandler: ({ data, api }: CustomCellRendererProps<IncomeRow>) => {
             if (!incomeApi) {
               return
@@ -121,10 +121,11 @@ const Incomes = ({ fromDate, toDate }: IncomesProps) => {
       {
         colId: 'delete',
         headerName: '',
+        valueGetter: ({ data }) => !!data?.original,
         cellRenderer: ButtonCellRenderer,
         cellRendererParams: {
           text: 'Delete',
-          isDisabledGetter: (incomeRow: IncomeRow | undefined) => !incomeRow?.original,
+          danger: true,
           clickedHandler: ({ data, api }: CustomCellRendererProps<IncomeRow>) => {
             if (!incomeApi) {
               return

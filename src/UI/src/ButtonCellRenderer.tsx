@@ -4,15 +4,14 @@ import { Button } from 'antd'
 
 export type ButtonCellRendererProps<TData> = {
   text: string
-  isDisabledGetter: (data: TData | undefined) => boolean
+  danger?: boolean
   clickedHandler: (props: CustomCellRendererProps<TData>) => void
 }
 
-const ButtonCellRenderer = <TData,>(props: CustomCellRendererProps<TData> & ButtonCellRendererProps<TData>) => {
-  const { text, isDisabledGetter, clickedHandler, data } = props
-  const isDisabled = isDisabledGetter(data)
+const ButtonCellRenderer = <TData,>(props: CustomCellRendererProps<TData, boolean> & ButtonCellRendererProps<TData>) => {
+  const { text, clickedHandler, danger, value } = props
   return (
-    <Button type="primary" disabled={isDisabled} onClick={() => clickedHandler(props)}>
+    <Button type="primary" danger={danger} disabled={!value} onClick={() => clickedHandler(props)}>
       {text}
     </Button>
   )
