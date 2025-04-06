@@ -75,7 +75,7 @@ const MonthlyComparisonDashboard = ({ fromDate, toDate }: MonthlyComparisonDashb
               enabled: true,
               mode: 'nearest',
             },
-            legend: { position: 'right' },
+            legend: { position: 'bottom' },
           },
           scales: {
             x: {

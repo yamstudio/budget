@@ -83,7 +83,7 @@ const YearToDateProgressDashboard = ({ toDate }: YearToDateProgressDashboardProp
               enabled: true,
               mode: 'nearest',
             },
-            legend: { position: 'right' },
+            legend: { position: 'bottom' },
           },
           scales: {
             x: {
