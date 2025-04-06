@@ -7,6 +7,7 @@
   "author": "Yujun Qin <yamstudio@users.noreply.github.com>",
   "private": true,
   "dependencies": {
+    "@tanstack/react-query": "^5.71.10",
     "ag-grid-react": "^32.3.4",
     "antd": "^5.24.6",
     "chart.js": "^4.4.8",

@@ -1,11 +1,10 @@
-import React, { useContext, useEffect, useMemo, useState } from 'react'
+import React, { useMemo } from 'react'
 import { Spin } from 'antd'
 import { ChartDataset, Chart as ChartJS, CategoryScale, Legend, LinearScale, BarElement, ChartData, Tooltip } from 'chart.js'
 import { format, eachMonthOfInterval } from 'date-fns'
 import { Bar } from 'react-chartjs-2'
 import Colors from './Colors'
-import { ApiContext, ExpenseCategoriesContext } from './Context'
-import { ExpenseSummaryPeriod } from './gensrc/Api'
+import { useExpenseCategories, useExpenseSummary } from './Queries'
 
 ChartJS.register(CategoryScale, Colors, Legend, LinearScale, BarElement, Tooltip)
 
@@ -15,26 +14,16 @@ type MonthlyComparisonDashboardProps = {
 }
 
 const MonthlyComparisonDashboard = ({ fromDate, toDate }: MonthlyComparisonDashboardProps) => {
-  const api = useContext(ApiContext)
-  const { expenseCategories } = useContext(ExpenseCategoriesContext)
-  const [expenseSummaryPeriods, setExpenseSummaryPeriods] = useState<ExpenseSummaryPeriod[] | undefined>(undefined)
-  useEffect(() => {
-    api
-      ?.getExpenseSummary({
-        fromDate: format(fromDate, 'yyyy-MM-dd'),
-        toDate: format(toDate, 'yyyy-MM-dd'),
-        aggregateExpenseCategoryID: false,
-      })
-      .then(({ data }) => setExpenseSummaryPeriods(data.periods || []))
-  }, [fromDate, toDate, api])
+  const expenseCategories = useExpenseCategories().data
+  const expenseSummary = useExpenseSummary(fromDate, toDate).data
 
   const monthlyAmountAggregatedByCategory: ChartData<'bar', number[], string> = useMemo(() => {
-    if (!expenseCategories || !expenseSummaryPeriods) {
+    if (!expenseCategories || !expenseSummary) {
       return { labels: [], datasets: [] }
     }
     const labels = eachMonthOfInterval({ start: fromDate, end: toDate }).map((month) => format(month, 'yyyy-MM'))
     const categoryIDToMonthToSum: Record<number, Record<string, number>> = {}
-    for (const { expenseCategoryID, fromDate, amount } of expenseSummaryPeriods) {
+    for (const { expenseCategoryID, fromDate, amount } of expenseSummary.periods!) {
       const month = fromDate!.substring(0, 7)
       categoryIDToMonthToSum[expenseCategoryID!] = categoryIDToMonthToSum[expenseCategoryID!] || {}
       categoryIDToMonthToSum[expenseCategoryID!][month] = amount
@@ -49,9 +38,9 @@ const MonthlyComparisonDashboard = ({ fromDate, toDate }: MonthlyComparisonDashb
       labels,
       datasets,
     }
-  }, [expenseSummaryPeriods, fromDate, toDate, expenseCategories])
+  }, [expenseSummary, fromDate, toDate, expenseCategories])
 
-  if (!expenseSummaryPeriods || !expenseCategories) {
+  if (!expenseSummary || !expenseCategories) {
     return (
       <div style={{ display: 'flex', flex: 1, flexDirection: 'column' }}>
         <Spin size="large" />
