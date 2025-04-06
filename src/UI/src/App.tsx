@@ -51,13 +51,10 @@ const AppContext = () => {
 
   const addVendor = (vendorDisplayName: string) =>
     api
-      .createVendor(
-        {
-          displayName: vendorDisplayName,
-          description: vendorDisplayName,
-        },
-        { credentials: 'include' }
-      )
+      .createVendor({
+        displayName: vendorDisplayName,
+        description: vendorDisplayName,
+      })
       .then(({ data }) => {
         setVendors([...(vendors || []), data])
         return data
@@ -65,13 +62,10 @@ const AppContext = () => {
 
   const addPaymentMethod = (paymentMethodDisplayName: string) =>
     api
-      .createPaymentMethod(
-        {
-          displayName: paymentMethodDisplayName,
-          description: paymentMethodDisplayName,
-        },
-        { credentials: 'include' }
-      )
+      .createPaymentMethod({
+        displayName: paymentMethodDisplayName,
+        description: paymentMethodDisplayName,
+      })
       .then(({ data }) => {
         setPaymentMethods([...(paymentMethods || []), data])
         return data
