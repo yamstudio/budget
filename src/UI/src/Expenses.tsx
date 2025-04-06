@@ -1,11 +1,20 @@
-import React, { useState, useEffect, useMemo, useContext } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { ColDef, GetRowIdFunc } from 'ag-grid-community'
 import { AgGridReact, CustomCellRendererProps } from 'ag-grid-react'
 import { Button, Spin } from 'antd'
-import { format } from 'date-fns'
 import AutoCompleteCellEditor from './AutoCompleteCellEditor'
 import ButtonCellRenderer, { ButtonCellRendererProps } from './ButtonCellRenderer'
-import { ApiContext, ExpenseCategoriesContext, PaymentMethodsContext, VendorsContext } from './Context'
+import {
+  useCreateExpense,
+  useCreateVendor,
+  useDeleteExpense,
+  useExpenseCategories,
+  useExpenses,
+  usePaymentMethods,
+  useUpdateExpense,
+  useVendors,
+} from './Queries'
 import { Expense } from './gensrc/Api'
 
 type ExpensesProps = {
@@ -18,10 +27,15 @@ type ExpenseRow = Omit<Expense, 'expenseCategory' | 'vendor' | 'paymentMethod'> 
 }
 
 const Expenses = ({ fromDate, toDate }: ExpensesProps) => {
-  const expenseApi = useContext(ApiContext)
-  const { expenseCategories } = useContext(ExpenseCategoriesContext)
-  const { vendors, addVendor } = useContext(VendorsContext)
-  const { paymentMethods, addPaymentMethod } = useContext(PaymentMethodsContext)
+  const expenseCategories = useExpenseCategories().data
+  const queryClient = useQueryClient()
+  const vendors = useVendors().data
+  const createVendor = useCreateVendor(queryClient)
+  const paymentMethods = usePaymentMethods().data
+  const expenses = useExpenses(fromDate, toDate).data
+  const createExpense = useCreateExpense(queryClient)
+  const updateExpense = useUpdateExpense(queryClient)
+  const deleteExpense = useDeleteExpense(queryClient)
   const expenseCategoryIDToDisplayName: { [key: string]: string } = useMemo(
     () =>
       expenseCategories?.reduce(
@@ -56,23 +70,20 @@ const Expenses = ({ fromDate, toDate }: ExpensesProps) => {
     [vendors]
   )
 
-  const [expenseRows, setExpenseRows] = useState<ExpenseRow[]>([])
+  const [expenseRows, setExpenseRows] = useState<ExpenseRow[] | undefined>(undefined)
   const [nextExpenseID, setNextExpenseID] = useState<number>(-1)
-  useEffect(() => {
-    expenseApi
-      ?.getExpenses({
-        fromDate: format(fromDate, 'yyyy-MM-dd'),
-        toDate: format(toDate, 'yyyy-MM-dd'),
-      })
-      .then(({ data }) =>
-        setExpenseRows(
-          data.map((expense) => ({
-            ...expense,
-            original: expense,
-          }))
-        )
-      )
-  }, [expenseApi, fromDate, toDate])
+  useEffect(
+    () =>
+      setExpenseRows((rows) =>
+        rows
+          ? rows
+          : expenses?.map((expense) => ({
+              ...expense,
+              original: expense,
+            }))
+      ),
+    [expenses]
+  )
 
   const colDefs: ColDef<ExpenseRow>[] = useMemo(
     () => [
@@ -100,32 +111,40 @@ const Expenses = ({ fromDate, toDate }: ExpensesProps) => {
         cellRenderer: ButtonCellRenderer,
         cellRendererParams: {
           text: 'Save',
-          clickedHandler: ({ data, api }: CustomCellRendererProps<ExpenseRow>) => {
-            if (!expenseApi) {
-              return
-            }
+          clickedHandler: ({ data }: CustomCellRendererProps<ExpenseRow>) => {
             const { original, date, amount, note, expenseCategoryID, vendorID, paymentMethodID, expenseID } = data!
-            const payload: Expense = {
-              expenseID: 0,
-              expenseCategoryID,
-              paymentMethodID,
-              vendorID,
-              date,
-              amount,
-              note,
-            }
-            const promise = original ? expenseApi.updateExpense(expenseID!, payload) : expenseApi.createExpense(payload)
-            promise.then((response) => {
-              const newData: ExpenseRow = {
-                ...response.data,
-                original: response.data,
-              }
-              api.applyTransaction({
-                remove: [data!],
-                add: [newData],
-              })
-              setExpenseRows((rows) => [...rows.filter((row) => row.expenseID !== expenseID), newData])
-            })
+            const promise = original
+              ? updateExpense.mutateAsync({
+                  expenseID,
+                  expenseCategoryID,
+                  paymentMethodID,
+                  vendorID,
+                  date,
+                  amount,
+                  note,
+                })
+              : createExpense.mutateAsync({
+                  expenseID: 0,
+                  expenseCategoryID,
+                  paymentMethodID,
+                  vendorID,
+                  date,
+                  amount,
+                  note,
+                })
+            promise.then((saved) =>
+              setExpenseRows((rows) =>
+                rows
+                  ? [
+                      ...rows.filter((row) => row.expenseID !== expenseID),
+                      {
+                        ...saved,
+                        original: saved,
+                      },
+                    ]
+                  : undefined
+              )
+            )
           },
         } satisfies ButtonCellRendererProps<ExpenseRow>,
         minWidth: 95,
@@ -134,22 +153,14 @@ const Expenses = ({ fromDate, toDate }: ExpensesProps) => {
       {
         colId: 'delete',
         headerName: '',
-        valueGetter: ({ data }) => !!data?.original,
+        valueGetter: () => true,
         cellRenderer: ButtonCellRenderer,
         cellRendererParams: {
           text: 'Delete',
           danger: true,
-          clickedHandler: ({ data, api }: CustomCellRendererProps<ExpenseRow>) => {
-            if (!expenseApi) {
-              return
-            }
-            const promise = data!.original ? expenseApi.deleteExpense(data!.expenseID!) : Promise.resolve(void 0)
-            promise.then(() => {
-              api.applyTransaction({
-                remove: [data!],
-              })
-              setExpenseRows((rows) => rows.filter(({ expenseID }) => expenseID !== data!.expenseID))
-            })
+          clickedHandler: ({ data }: CustomCellRendererProps<ExpenseRow>) => {
+            const promise = data!.original ? deleteExpense.mutateAsync(data!.expenseID!) : Promise.resolve(void 0)
+            promise.then(() => setExpenseRows((rows) => rows?.filter((row) => row.expenseID !== data!.expenseID)))
           },
         } satisfies ButtonCellRendererProps<ExpenseRow>,
         minWidth: 105,
@@ -172,7 +183,8 @@ const Expenses = ({ fromDate, toDate }: ExpensesProps) => {
         editable: true,
         cellEditor: AutoCompleteCellEditor,
         cellEditorParams: {
-          addRefData: (vendorDisplayName: string) => addVendor(vendorDisplayName).then(({ vendorID }) => vendorID),
+          addRefData: (vendorDisplayName: string) =>
+            createVendor.mutateAsync({ displayName: vendorDisplayName, description: vendorDisplayName }).then(({ vendorID }) => vendorID),
         },
       },
       {
@@ -182,10 +194,6 @@ const Expenses = ({ fromDate, toDate }: ExpensesProps) => {
         width: 200,
         editable: true,
         cellEditor: AutoCompleteCellEditor,
-        cellEditorParams: {
-          addRefData: (paymentMethodDisplayName: string) =>
-            addPaymentMethod(paymentMethodDisplayName).then(({ paymentMethodID }) => paymentMethodID),
-        },
       },
       {
         field: 'amount',
@@ -203,23 +211,27 @@ const Expenses = ({ fromDate, toDate }: ExpensesProps) => {
   const getRowId: GetRowIdFunc<ExpenseRow> = ({ data }) => `${data.expenseID}`
 
   const addExpenseHandler = () => {
-    setExpenseRows((rows) => [
-      ...rows,
-      {
-        expenseID: nextExpenseID,
-        expenseCategoryID: undefined,
-        vendorID: undefined,
-        paymentMethodID: undefined,
-        date: undefined,
-        amount: undefined,
-        note: undefined,
-        original: undefined,
-      },
-    ])
-    setNextExpenseID(nextExpenseID - 1)
+    setExpenseRows((rows) =>
+      rows
+        ? [
+            ...rows,
+            {
+              expenseID: nextExpenseID,
+              expenseCategoryID: undefined,
+              vendorID: undefined,
+              paymentMethodID: undefined,
+              date: undefined,
+              amount: undefined,
+              note: undefined,
+              original: undefined,
+            },
+          ]
+        : undefined
+    )
+    setNextExpenseID((id) => id - 1)
   }
 
-  if (!expenseApi || !expenseCategories || !vendors || !paymentMethods) {
+  if (!expenseCategories || !vendors || !paymentMethods) {
     return (
       <div style={{ display: 'flex', flex: 1, flexDirection: 'column' }}>
         <Spin size="large" />
@@ -229,7 +241,7 @@ const Expenses = ({ fromDate, toDate }: ExpensesProps) => {
 
   return (
     <div style={{ display: 'flex', flex: 1, flexDirection: 'column' }}>
-      <Button disabled={!expenseRows.length} onClick={addExpenseHandler}>
+      <Button disabled={!expenses} onClick={addExpenseHandler}>
         New Expense
       </Button>
       <div className="ag-theme-quartz" style={{ flex: 1 }}>

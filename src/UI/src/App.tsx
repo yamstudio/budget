@@ -1,89 +1,25 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useMemo } from 'react'
+import { QueryClient, QueryClientContext } from '@tanstack/react-query'
 import type { MenuProps } from 'antd'
 import { Flex, Layout, Menu } from 'antd'
 import { addDays, addMonths, startOfMonth } from 'date-fns'
 import { Navigate, Link, Route, Routes, useLocation, Outlet } from 'react-router-dom'
-import {
-  ApiContext,
-  ExpenseCategoriesContext,
-  IncomeCategoriesContext,
-  VendorsContext,
-  PaymentMethodsContext,
-  IncomeSourcesContext,
-} from './Context'
 import Expenses from './Expenses'
 import Incomes from './Incomes'
 import MonthlyComparisonDashboard from './MonthlyComparisonDashboard'
 import YearToDateProgressDashboard from './YearToDateProgressDashboard'
-import { Api, ExpenseCategory, IncomeCategory, IncomeSource, PaymentMethod, Vendor } from './gensrc/Api'
 
 const { Header, Footer, Content } = Layout
-const api = new Api<never>().api
+const queryClient = new QueryClient({})
 const today = new Date()
 const toDate = addDays(today, 1)
 const fromDate = startOfMonth(addMonths(today, -3))
 
 const AppContext = () => {
-  const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[] | undefined>(undefined)
-  useEffect(() => {
-    api.getExpenseCategories().then(({ data }) => setExpenseCategories(data))
-  }, [])
-
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[] | undefined>(undefined)
-  useEffect(() => {
-    api.getPaymentMethods().then(({ data }) => setPaymentMethods(data))
-  }, [])
-
-  const [vendors, setVendors] = useState<Vendor[] | undefined>(undefined)
-  useEffect(() => {
-    api.getVendors().then(({ data }) => setVendors(data))
-  }, [])
-
-  const [incomeCategories, setIncomeCategories] = useState<IncomeCategory[] | undefined>(undefined)
-  useEffect(() => {
-    api.getIncomeCategories().then(({ data }) => setIncomeCategories(data))
-  }, [])
-
-  const [incomeSources, setIncomeSources] = useState<IncomeSource[] | undefined>(undefined)
-  useEffect(() => {
-    api.getIncomeSources().then(({ data }) => setIncomeSources(data))
-  }, [])
-
-  const addVendor = (vendorDisplayName: string) =>
-    api
-      .createVendor({
-        displayName: vendorDisplayName,
-        description: vendorDisplayName,
-      })
-      .then(({ data }) => {
-        setVendors([...(vendors || []), data])
-        return data
-      })
-
-  const addPaymentMethod = (paymentMethodDisplayName: string) =>
-    api
-      .createPaymentMethod({
-        displayName: paymentMethodDisplayName,
-        description: paymentMethodDisplayName,
-      })
-      .then(({ data }) => {
-        setPaymentMethods([...(paymentMethods || []), data])
-        return data
-      })
   return (
-    <ApiContext.Provider value={api}>
-      <ExpenseCategoriesContext.Provider value={{ expenseCategories }}>
-        <VendorsContext.Provider value={{ vendors, addVendor }}>
-          <IncomeCategoriesContext.Provider value={{ incomeCategories }}>
-            <IncomeSourcesContext.Provider value={{ incomeSources }}>
-              <PaymentMethodsContext.Provider value={{ paymentMethods, addPaymentMethod }}>
-                <Outlet />
-              </PaymentMethodsContext.Provider>
-            </IncomeSourcesContext.Provider>
-          </IncomeCategoriesContext.Provider>
-        </VendorsContext.Provider>
-      </ExpenseCategoriesContext.Provider>
-    </ApiContext.Provider>
+    <QueryClientContext.Provider value={queryClient}>
+      <Outlet />
+    </QueryClientContext.Provider>
   )
 }
 
