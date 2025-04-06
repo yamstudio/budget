@@ -7,28 +7,36 @@ type AutoCompleteCellEditorProps = CustomCellEditorProps<unknown, number, unknow
   addRefData?: (label: string) => Promise<number>
 }
 type AutoCompleteOption = { label: string; value: string }
-const NEW_OPTION_SUFFIX = ' (new option)'
+const OPTION_VALUE_PREFIX = '__opt__'
+const NEW_OPTION_VALUE = OPTION_VALUE_PREFIX + '-1'
+const NEW_OPTION_LABEL_SUFFIX = ' (new option)'
 
 const AutoCompleteCellEditor = forwardRef(
   (
     { colDef: { refData }, initialValue, stopEditing, onValueChange, addRefData }: AutoCompleteCellEditorProps,
     ref: ForwardedRef<BaseSelectRef>
   ) => {
-    const refDataOptions: AutoCompleteOption[] = Object.keys(refData || {}).map((value) => ({ value, label: refData![value] }))
+    const refDataOptions: AutoCompleteOption[] = Object.keys(refData || {}).map((value) => ({
+      value: OPTION_VALUE_PREFIX + value,
+      label: refData![value],
+    }))
     const [options, setOptions] = useState<AutoCompleteOption[]>(refDataOptions)
-    const [value, setValue] = useState<string>(refDataOptions.find(({ value }) => String(initialValue) === value)?.label || '')
+    const [value, setValue] = useState<string>(
+      (initialValue && refDataOptions.find(({ value }) => OPTION_VALUE_PREFIX + initialValue === value)?.label) || ''
+    )
     const filterOption = (inputValue: string, option: AutoCompleteOption | undefined) =>
       option!.label.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1
-    const onChange = (inputValue: string) => {
-      const found = refDataOptions.find(({ value }) => String(inputValue) === value)?.label
-      const newValue = found || inputValue
+    const onChange = (inputValue: string, option?: AutoCompleteOption[] | AutoCompleteOption) => {
+      // confusingly, inputValue can be a value (on select) or a label (when typing)
+      const newValue = (typeof option === 'object' && !Array.isArray(option) && option.label) || inputValue
+      const addNewOption = newValue && addRefData && !refDataOptions.some(({ label }) => newValue === label)
       setOptions([
         ...refDataOptions,
-        ...(addRefData && !found && inputValue
+        ...(addNewOption
           ? [
               {
-                value: '-1',
-                label: `${inputValue}${NEW_OPTION_SUFFIX}`,
+                value: NEW_OPTION_VALUE,
+                label: `${newValue}${NEW_OPTION_LABEL_SUFFIX}`,
               },
             ]
           : []),
@@ -36,13 +44,14 @@ const AutoCompleteCellEditor = forwardRef(
       setValue(newValue)
     }
     const onSelect = (selectedValue: string, option: AutoCompleteOption) => {
-      if (addRefData && selectedValue === '-1') {
-        const cleanLabel = option.label.substring(0, option.label.lastIndexOf(NEW_OPTION_SUFFIX))
-        addRefData(cleanLabel)
-          .then((newValue) => onValueChange(newValue))
-          .then(() => stopEditing())
+      if (addRefData && selectedValue === NEW_OPTION_VALUE) {
+        const cleanLabel = option.label.substring(0, option.label.lastIndexOf(NEW_OPTION_LABEL_SUFFIX))
+        addRefData(cleanLabel).then((newValue) => {
+          onValueChange(newValue)
+          stopEditing()
+        })
       } else {
-        onValueChange(Number(selectedValue))
+        onValueChange(Number(selectedValue.replace(OPTION_VALUE_PREFIX, '')))
         stopEditing()
       }
     }
