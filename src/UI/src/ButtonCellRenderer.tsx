@@ -1,18 +1,19 @@
 import React from 'react'
+import { SaveOutlined, DeleteOutlined } from '@ant-design/icons'
 import { CustomCellRendererProps } from 'ag-grid-react'
 import { Button } from 'antd'
 
 export type ButtonCellRendererProps<TData> = {
-  text: string
+  icon: 'save' | 'delete'
   danger?: boolean
   clickedHandler: (props: CustomCellRendererProps<TData>) => void
 }
 
 const ButtonCellRenderer = <TData,>(props: CustomCellRendererProps<TData, boolean> & ButtonCellRendererProps<TData>) => {
-  const { text, clickedHandler, danger, value } = props
+  const { icon, clickedHandler, danger, value } = props
   return (
     <Button type="primary" danger={danger} disabled={!value} onClick={() => clickedHandler(props)}>
-      {text}
+      {icon === 'save' ? <SaveOutlined></SaveOutlined> : <DeleteOutlined></DeleteOutlined>}
     </Button>
   )
 }

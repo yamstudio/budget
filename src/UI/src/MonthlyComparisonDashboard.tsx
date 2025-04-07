@@ -54,6 +54,7 @@ const MonthlyComparisonDashboard = ({ fromDate, toDate }: MonthlyComparisonDashb
         datasetIdKey="label"
         data={monthlyAmountAggregatedByCategory}
         options={{
+          maintainAspectRatio: false,
           responsive: true,
           hover: {
             mode: 'nearest',
