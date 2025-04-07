@@ -62,6 +62,7 @@ const YearToDateProgressDashboard = ({ toDate }: YearToDateProgressDashboardProp
         datasetIdKey="label"
         data={monthlyAmountAggregatedByCategory}
         options={{
+          maintainAspectRatio: false,
           responsive: true,
           hover: {
             mode: 'nearest',

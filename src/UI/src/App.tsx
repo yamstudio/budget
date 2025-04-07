@@ -9,7 +9,7 @@ import Incomes from './Incomes'
 import MonthlyComparisonDashboard from './MonthlyComparisonDashboard'
 import YearToDateProgressDashboard from './YearToDateProgressDashboard'
 
-const { Header, Footer, Content } = Layout
+const { Header, Content } = Layout
 const queryClient = new QueryClient({})
 const today = new Date()
 const toDate = addDays(today, 1)
@@ -83,7 +83,6 @@ const App = () => (
           </Route>
         </Routes>
       </Content>
-      <Footer></Footer>
     </Layout>
   </Flex>
 )

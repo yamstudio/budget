@@ -4,3 +4,19 @@
 body {
   margin: 0;
 }
+
+.budget-grid-container {
+  display: flex;
+  flex: 1;
+  flex-direction: column-reverse;
+
+  .budget-grid-control {
+    margin: 0.375rem;
+  }
+}
+
+@media (min-width: 450px) {
+  .budget-grid-container {
+    flex-direction: row;
+  }
+}

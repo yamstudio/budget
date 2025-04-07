@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { PlusOutlined } from '@ant-design/icons'
 import { ColDef, GetRowIdFunc } from 'ag-grid-community'
 import { AgGridReact, CustomCellRendererProps } from 'ag-grid-react'
 import { Button, Spin } from 'antd'
@@ -66,29 +67,47 @@ const Incomes = ({ fromDate, toDate }: IncomesProps) => {
 
   const colDefs: ColDef<IncomeRow>[] = useMemo(
     () => [
+      { editable: true, field: 'date', headerName: '🗓️', headerTooltip: 'Date', width: 120 } satisfies ColDef<
+        IncomeRow,
+        string | undefined
+      >,
       {
-        colId: 'save',
-        headerName: '',
-        valueGetter: ({ data }) => {
-          if (!data) {
-            return false
-          }
-          const { original, date, amount, note, incomeCategoryID, incomeSourceID } = data
-          if (!(date && amount && incomeCategoryID && incomeSourceID)) {
-            return false
-          }
-          return (
-            !original ||
-            date !== original.date ||
-            amount !== original.amount ||
-            note !== original.note ||
-            incomeCategoryID !== original.incomeCategoryID ||
-            incomeSourceID !== original.incomeSourceID
-          )
+        cellEditor: AutoCompleteCellEditor,
+        editable: true,
+        field: 'incomeCategoryID',
+        headerName: '🏷️',
+        headerTooltip: 'Category',
+        refData: incomeCategoryIDToDisplayName,
+        width: 150,
+      } satisfies ColDef<IncomeRow, number | undefined>,
+      {
+        cellEditor: AutoCompleteCellEditor,
+        editable: true,
+        field: 'incomeSourceID',
+        headerName: '💰',
+        headerTooltip: 'Source',
+        refData: incomeSourceIDToDisplayName,
+        width: 150,
+      } satisfies ColDef<IncomeRow, number | undefined>,
+      {
+        cellEditor: 'agNumberCellEditor',
+        cellEditorParams: {
+          precision: 2,
         },
+        editable: true,
+        field: 'amount',
+        headerName: '💶',
+        headerTooltip: 'Amount',
+        width: 90,
+      } satisfies ColDef<IncomeRow, number | undefined>,
+      { editable: true, field: 'note', headerName: '📓', headerTooltip: 'Note', width: 120 } satisfies ColDef<
+        IncomeRow,
+        string | null | undefined
+      >,
+      {
         cellRenderer: ButtonCellRenderer,
         cellRendererParams: {
-          text: 'Save',
+          icon: 'save',
           clickedHandler: ({ data }: CustomCellRendererProps<IncomeRow>) => {
             const { original, date, amount, note, incomeCategoryID, incomeSourceID, incomeID } = data!
             const promise = original
@@ -123,52 +142,46 @@ const Incomes = ({ fromDate, toDate }: IncomesProps) => {
             )
           },
         } satisfies ButtonCellRendererProps<IncomeRow>,
-        minWidth: 95,
-        maxWidth: 95,
-      },
+        colId: 'save',
+        headerName: '',
+        minWidth: 80,
+        maxWidth: 80,
+        sortable: false,
+        valueGetter: ({ data }) => {
+          if (!data) {
+            return false
+          }
+          const { original, date, amount, note, incomeCategoryID, incomeSourceID } = data
+          if (!(date && amount && incomeCategoryID && incomeSourceID)) {
+            return false
+          }
+          return (
+            !original ||
+            date !== original.date ||
+            amount !== original.amount ||
+            note !== original.note ||
+            incomeCategoryID !== original.incomeCategoryID ||
+            incomeSourceID !== original.incomeSourceID
+          )
+        },
+      } satisfies ColDef<IncomeRow, boolean>,
       {
         colId: 'delete',
-        headerName: '',
-        valueGetter: () => true,
         cellRenderer: ButtonCellRenderer,
         cellRendererParams: {
-          text: 'Delete',
+          icon: 'delete',
           danger: true,
           clickedHandler: ({ data }: CustomCellRendererProps<IncomeRow>) => {
             const promise = data!.original ? deleteIncome.mutateAsync(data!.incomeID!) : Promise.resolve(void 0)
             promise.then(() => setIncomeRows((rows) => rows?.filter((row) => row.incomeID !== data!.incomeID)))
           },
         } satisfies ButtonCellRendererProps<IncomeRow>,
-        minWidth: 105,
-        maxWidth: 105,
-      },
-      { field: 'date', width: 120, editable: true },
-      {
-        field: 'incomeCategoryID',
-        headerName: 'Income Category',
-        refData: incomeCategoryIDToDisplayName,
-        width: 200,
-        editable: true,
-        cellEditor: AutoCompleteCellEditor,
-      },
-      {
-        field: 'incomeSourceID',
-        headerName: 'Income Source',
-        refData: incomeSourceIDToDisplayName,
-        width: 200,
-        editable: true,
-        cellEditor: AutoCompleteCellEditor,
-      },
-      {
-        field: 'amount',
-        width: 120,
-        editable: true,
-        cellEditor: 'agNumberCellEditor',
-        cellEditorParams: {
-          precision: 2,
-        },
-      },
-      { field: 'note', editable: true },
+        headerName: '',
+        minWidth: 80,
+        maxWidth: 80,
+        sortable: false,
+        valueGetter: () => true,
+      } satisfies ColDef<IncomeRow, boolean>,
     ],
     [incomeCategoryIDToDisplayName, incomeSourceIDToDisplayName]
   )
@@ -194,22 +207,23 @@ const Incomes = ({ fromDate, toDate }: IncomesProps) => {
     setNextIncomeID((id) => id - 1)
   }
 
-  if (!incomeCategories || !incomeSources) {
-    return (
-      <div style={{ display: 'flex', flex: 1, flexDirection: 'column' }}>
-        <Spin size="large" />
-      </div>
-    )
-  }
+  const rowData = incomeRows?.filter(({ original }) => original)
+  const pinnedTopRowData = incomeRows?.filter(({ original }) => !original)
 
   return (
-    <div style={{ display: 'flex', flex: 1, flexDirection: 'column' }}>
-      <Button disabled={!incomes} onClick={createIncomeHandler}>
-        New Income
-      </Button>
-      <div className="ag-theme-quartz" style={{ flex: 1 }}>
-        <AgGridReact rowData={incomeRows} columnDefs={colDefs} getRowId={getRowId}></AgGridReact>
-      </div>
+    <div className="budget-grid-container">
+      {!incomeCategories || !incomeSources ? (
+        <Spin size="large" />
+      ) : (
+        <>
+          <Button className="budget-grid-control" disabled={!incomes} onClick={createIncomeHandler}>
+            <PlusOutlined></PlusOutlined>
+          </Button>
+          <div className="ag-theme-quartz" style={{ flex: 1 }}>
+            <AgGridReact rowData={rowData} pinnedTopRowData={pinnedTopRowData} columnDefs={colDefs} getRowId={getRowId}></AgGridReact>
+          </div>
+        </>
+      )}
     </div>
   )
 }
