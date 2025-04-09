@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { PlusOutlined } from '@ant-design/icons'
 import { useQueryClient } from '@tanstack/react-query'
-import { ColDef, GetRowIdFunc } from 'ag-grid-community'
+import type { ColDef, GetRowIdFunc } from 'ag-grid-community'
 import { AgGridReact, CustomCellRendererProps } from 'ag-grid-react'
-import { Button, Spin } from 'antd'
+import { Spin } from 'antd'
+import AddExpenseButtons from './AddExpenseButtons'
 import AutoCompleteCellEditor from './AutoCompleteCellEditor'
-import ButtonCellRenderer, { ButtonCellRendererProps } from './ButtonCellRenderer'
+import ButtonCellRenderer from './ButtonCellRenderer'
+import type { ButtonCellRendererProps } from './ButtonCellRenderer'
 import {
   useCreateExpense,
   useCreateVendor,
@@ -16,7 +17,7 @@ import {
   useUpdateExpense,
   useVendors,
 } from './Queries'
-import { Expense } from './gensrc/Api'
+import type { Expense, ExpenseTemplate } from './gensrc/Api'
 
 type ExpensesProps = {
   fromDate: Date
@@ -224,18 +225,18 @@ const Expenses = ({ fromDate, toDate }: ExpensesProps) => {
   )
   const getRowId: GetRowIdFunc<ExpenseRow> = ({ data }) => `${data.expenseID}`
 
-  const addExpenseHandler = () => {
+  const addExpenseHandler = ({ expenseCategoryID, vendorID, paymentMethodID, amount }: ExpenseTemplate) => {
     setExpenseRows((rows) =>
       rows
         ? [
             ...rows,
             {
               expenseID: nextExpenseID,
-              expenseCategoryID: undefined,
-              vendorID: undefined,
-              paymentMethodID: undefined,
+              expenseCategoryID: expenseCategoryID ?? undefined,
+              vendorID: vendorID ?? undefined,
+              paymentMethodID: paymentMethodID ?? undefined,
+              amount: amount ?? undefined,
               date: undefined,
-              amount: undefined,
               note: undefined,
               original: undefined,
             },
@@ -254,9 +255,7 @@ const Expenses = ({ fromDate, toDate }: ExpensesProps) => {
         <Spin size="large" />
       ) : (
         <>
-          <Button className="budget-grid-control" disabled={!expenses} onClick={addExpenseHandler}>
-            <PlusOutlined></PlusOutlined>
-          </Button>
+          <AddExpenseButtons disabled={!expenses} addExpenseRow={addExpenseHandler} />
           <div className="ag-theme-quartz" style={{ flex: 1 }}>
             <AgGridReact rowData={rowData} pinnedTopRowData={pinnedTopRowData} columnDefs={colDefs} getRowId={getRowId}></AgGridReact>
           </div>

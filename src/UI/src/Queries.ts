@@ -1,5 +1,5 @@
 import { QueryClient, useMutation, useQuery } from '@tanstack/react-query'
-import { format } from 'date-fns'
+import { addMonths, format, startOfMonth } from 'date-fns'
 import { Api, Expense, Income, Vendor } from './gensrc/Api'
 
 const api = new Api<never>().api
@@ -154,6 +154,7 @@ export const useExpenseSummary = (fromDate: Date, toDate: Date) =>
         .getExpenseSummary({
           fromDate: format(fromDate, 'yyyy-MM-dd'),
           toDate: format(toDate, 'yyyy-MM-dd'),
+          aggregateByExpenseCategory: true,
         })
         .then(({ data }) => data),
   })
@@ -166,6 +167,26 @@ const invalidateExpenseSummary = (queryClient: QueryClient, date: string) =>
       (queryKey[1] as string).localeCompare(date) <= 0 &&
       (queryKey[2] as string).localeCompare(date) >= 0 &&
       !!state.data,
+  })
+
+export const useExpenseTemplates = () =>
+  useQuery({
+    initialData: undefined,
+    queryKey: ['expenseTemplates'],
+    queryFn: () =>
+      api
+        .getExpenseTemplates({
+          fromDate: format(startOfMonth(addMonths(today, -6)), 'yyyy-MM-dd'),
+          toDate: format(today, 'yyyy-MM-dd'),
+          groupThreshold: 3,
+          maxResults: 10,
+          aggregateByAmount: true,
+          aggregateByExpenseCategory: true,
+          aggregateByPaymentMethod: true,
+          aggregateByVendor: true,
+        })
+        .then(({ data }) => data),
+    staleTime: Infinity,
   })
 
 export const useIncomeCategories = () =>
@@ -205,3 +226,5 @@ export const useCreateVendor = (queryClient: QueryClient) =>
       }
     },
   })
+
+export const today = new Date()

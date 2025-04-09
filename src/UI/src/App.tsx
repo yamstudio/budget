@@ -7,11 +7,11 @@ import { Navigate, Link, Route, Routes, useLocation, Outlet } from 'react-router
 import Expenses from './Expenses'
 import Incomes from './Incomes'
 import MonthlyComparisonDashboard from './MonthlyComparisonDashboard'
+import { today } from './Queries'
 import YearToDateProgressDashboard from './YearToDateProgressDashboard'
 
 const { Header, Content } = Layout
 const queryClient = new QueryClient({})
-const today = new Date()
 const toDate = addDays(today, 1)
 const fromDate = startOfMonth(addMonths(today, -3))
 

@@ -77,6 +77,17 @@ export interface ExpenseSummaryPeriod {
   expenseCategoryID?: number | null
 }
 
+export interface ExpenseTemplate {
+  /** @format int32 */
+  expenseCategoryID?: number | null
+  /** @format int32 */
+  vendorID?: number | null
+  /** @format int32 */
+  paymentMethodID?: number | null
+  /** @format double */
+  amount?: number | null
+}
+
 export interface Income {
   /** @format int32 */
   incomeID?: number
@@ -517,12 +528,44 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         fromDate: string
         /** @format date */
         toDate: string
-        aggregateExpenseCategoryID?: boolean
+        aggregateByExpenseCategory?: boolean
       },
       params: RequestParams = {}
     ) =>
       this.request<ExpenseSummary, any>({
         path: `/api/expenses/summary`,
+        method: 'GET',
+        query: query,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ExpenseApi
+     * @name GetExpenseTemplates
+     * @request GET:/api/expenses/templates
+     */
+    getExpenseTemplates: (
+      query: {
+        /** @format date */
+        fromDate: string
+        /** @format date */
+        toDate: string
+        /** @format int32 */
+        groupThreshold?: number
+        /** @format int32 */
+        maxResults?: number
+        aggregateByAmount?: boolean
+        aggregateByExpenseCategory?: boolean
+        aggregateByPaymentMethod?: boolean
+        aggregateByVendor?: boolean
+      },
+      params: RequestParams = {}
+    ) =>
+      this.request<ExpenseTemplate[], any>({
+        path: `/api/expenses/templates`,
         method: 'GET',
         query: query,
         format: 'json',
