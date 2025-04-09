@@ -99,7 +99,7 @@ public class ExpenseApiController : ControllerBase
     public ExpenseSummary GetExpenseSummary(
         [BindRequired, FromQuery(Name = "fromDate")] DateOnly fromDate,
         [BindRequired, FromQuery(Name = "toDate")] DateOnly toDate,
-        [FromQuery(Name = "aggregateExpenseCategoryID")] bool aggregateExpenseCategory
+        [FromQuery(Name = "aggregateByExpenseCategory")] bool aggregateByExpenseCategory
     )
     {
         var periods = (
@@ -110,7 +110,7 @@ public class ExpenseApiController : ControllerBase
             {
                 expense.Date.Year,
                 expense.Date.Month,
-                ExpenseCategoryID = aggregateExpenseCategory ? -1 : expense.ExpenseCategoryID,
+                ExpenseCategoryID = aggregateByExpenseCategory ? expense.ExpenseCategoryID : -1,
             } into g
             select new
             {
@@ -130,7 +130,7 @@ public class ExpenseApiController : ControllerBase
                     FromDate = monthStart < fromDate ? fromDate : monthStart,
                     ToDate = monthEnd > toDate ? toDate : monthEnd,
                     Amount = g.Amount,
-                    ExpenseCategoryID = aggregateExpenseCategory ? null : g.ExpenseCategoryID,
+                    ExpenseCategoryID = aggregateByExpenseCategory ? g.ExpenseCategoryID : null,
                 };
             })
         .ToImmutableList();
@@ -138,5 +138,64 @@ public class ExpenseApiController : ControllerBase
         {
             Periods = periods,
         };
+    }
+
+    [HttpGet("templates", Name = "Get Expense Templates")]
+    public ActionResult<ICollection<ExpenseTemplate>> GetExpenseTemplates(
+        [BindRequired, FromQuery(Name = "fromDate")] DateOnly fromDate,
+        [BindRequired, FromQuery(Name = "toDate")] DateOnly toDate,
+        [BindRequired, FromQuery(Name = "groupThreshold")] int groupThreshold,
+        [BindRequired, FromQuery(Name = "maxResults")] int maxResults,
+        [FromQuery(Name = "aggregateByAmount")] bool aggregateByAmount,
+        [FromQuery(Name = "aggregateByExpenseCategory")] bool aggregateByExpenseCategory,
+        [FromQuery(Name = "aggregateByPaymentMethod")] bool aggregateByPaymentMethod,
+        [FromQuery(Name = "aggregateByVendor")] bool aggregateByVendor
+    )
+    {
+        if (!aggregateByAmount && !aggregateByExpenseCategory && !aggregateByPaymentMethod && !aggregateByVendor)
+        {
+            return BadRequest("At least one aggregation option must be specified.");
+        }
+        if (groupThreshold < 1)
+        {
+            return BadRequest("Group threshold must be greater than or equal to 1.");
+        }
+        if (maxResults > 20)
+        {
+            return BadRequest("Max results must be less than or equal to 20.");
+        }
+        return (
+            from expense in _context.Expenses
+            where expense.Date >= fromDate
+            where expense.Date <= toDate
+            group expense by new
+            {
+                Amount = aggregateByAmount ? expense.Amount : -1,
+                ExpenseCategoryID = aggregateByExpenseCategory ? expense.ExpenseCategoryID : -1,
+                PaymentMethodId = aggregateByPaymentMethod ? expense.PaymentMethodID : -1,
+                VendorId = aggregateByVendor ? expense.VendorID : -1,
+            } into g
+            select new
+            {
+                g.Key.Amount,
+                g.Key.ExpenseCategoryID,
+                g.Key.PaymentMethodId,
+                g.Key.VendorId,
+                Total = g.Count()
+            }
+        )
+            .Where(g => g.Total > groupThreshold)
+            .OrderByDescending(g => g.Total)
+            .Take(maxResults)
+            .Select(g => 
+                new ExpenseTemplate
+                {
+                    Amount = aggregateByAmount ? g.Amount : null,
+                    ExpenseCategoryID = aggregateByExpenseCategory ? g.ExpenseCategoryID : null,
+                    PaymentMethodID = aggregateByPaymentMethod ? g.PaymentMethodId : null,
+                    VendorID = aggregateByVendor ? g.VendorId : null,
+                }
+            )
+            .ToImmutableList();
     }
 }
