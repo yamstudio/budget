@@ -1,9 +1,19 @@
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo } from 'react'
 import { QueryClient, QueryClientContext } from '@tanstack/react-query'
+import {
+  ModuleRegistry,
+  ClientSideRowModelModule,
+  NumberEditorModule,
+  TextEditorModule,
+  ValidationModule,
+  DateEditorModule,
+  PinnedRowModule,
+  CustomEditorModule,
+} from 'ag-grid-community'
 import type { MenuProps } from 'antd'
 import { Flex, Layout, Menu } from 'antd'
 import { addDays, addMonths, startOfMonth } from 'date-fns'
-import { Navigate, Link, Route, Routes, useLocation, Outlet } from 'react-router-dom'
+import { Navigate, Link, Route, Routes, useLocation, Outlet } from 'react-router'
 import Expenses from './Expenses'
 import Incomes from './Incomes'
 import MonthlyComparisonDashboard from './MonthlyComparisonDashboard'
@@ -65,26 +75,40 @@ const AppHeader = () => {
   )
 }
 
-const App = () => (
-  <Flex>
-    <Layout style={{ height: '100vh', display: 'flex' }}>
-      <AppHeader />
-      <Content style={{ flex: 1, display: 'flex' }}>
-        <Routes>
-          <Route path="/" element={<AppContext />}>
-            <Route path="expenses" element={<Expenses fromDate={fromDate} toDate={toDate} />} />
-            <Route path="incomes" element={<Incomes fromDate={fromDate} toDate={toDate} />} />
-            <Route path="dashboards">
-              <Route path="monthly-comparison" element={<MonthlyComparisonDashboard fromDate={fromDate} toDate={toDate} />} />
-              <Route path="year-to-date-progress" element={<YearToDateProgressDashboard toDate={toDate} />} />
+const App = () => {
+  useEffect(() => {
+    ModuleRegistry.registerModules([
+      ClientSideRowModelModule,
+      CustomEditorModule,
+      DateEditorModule,
+      NumberEditorModule,
+      PinnedRowModule,
+      TextEditorModule,
+      ValidationModule,
+    ])
+  }, [])
+
+  return (
+    <Flex>
+      <Layout style={{ height: '100vh', display: 'flex' }}>
+        <AppHeader />
+        <Content style={{ flex: 1, display: 'flex' }}>
+          <Routes>
+            <Route path="/" element={<AppContext />}>
+              <Route path="expenses" element={<Expenses fromDate={fromDate} toDate={toDate} />} />
+              <Route path="incomes" element={<Incomes fromDate={fromDate} toDate={toDate} />} />
+              <Route path="dashboards">
+                <Route path="monthly-comparison" element={<MonthlyComparisonDashboard fromDate={fromDate} toDate={toDate} />} />
+                <Route path="year-to-date-progress" element={<YearToDateProgressDashboard toDate={toDate} />} />
+              </Route>
+              <Route path="/" element={<Navigate to="expenses" />} />
+              <Route path="*" element={<Navigate to="/" />} />
             </Route>
-            <Route path="/" element={<Navigate to="expenses" />} />
-            <Route path="*" element={<Navigate to="/" />} />
-          </Route>
-        </Routes>
-      </Content>
-    </Layout>
-  </Flex>
-)
+          </Routes>
+        </Content>
+      </Layout>
+    </Flex>
+  )
+}
 
 export default App
