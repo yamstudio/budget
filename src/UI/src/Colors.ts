@@ -1,6 +1,5 @@
 import type { Chart, ChartDataset } from 'chart.js'
 import { Colors as DefaultColors, DoughnutController, PolarAreaController } from 'chart.js'
-import { ColorsPluginOptions } from 'chart.js/dist/plugins/plugin.colors'
 
 const BORDER_COLORS = [
   'rgb(250, 211, 144)',
@@ -62,7 +61,7 @@ const customChartColors = {
   defaults: {
     enabled: true,
   },
-  beforeLayout: (chart: Chart, _args: unknown, options: ColorsPluginOptions) => {
+  beforeLayout: (chart: Chart, _args: unknown, options: Parameters<(typeof DefaultColors)['beforeLayout']>[2]) => {
     if (!options.enabled) {
       return
     }
