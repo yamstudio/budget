@@ -3,7 +3,8 @@ using YamStudio.Budget.WebApi.Models;
 
 namespace YamStudio.Budget.WebApi.Data;
 
-public class BudgetDbContext : DbContext {
+public class BudgetDbContext : DbContext
+{
     public BudgetDbContext(DbContextOptions<BudgetDbContext> options) : base(options)
     {
     }

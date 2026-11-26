@@ -5,7 +5,8 @@ namespace YamStudio.Budget.WebApi.Models;
 
 [Index(nameof(FromDate))]
 [Index(nameof(ToDate))]
-public class Budget {
+public class Budget
+{
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int BudgetID { get; set; }
     public int ExpenseCategoryID { get; set; }

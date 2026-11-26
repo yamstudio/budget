@@ -3,7 +3,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace YamStudio.Budget.WebApi.Models;
 
-public class PaymentMethod {
+public class PaymentMethod
+{
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int PaymentMethodID { get; set; }
     [StringLength(64)]

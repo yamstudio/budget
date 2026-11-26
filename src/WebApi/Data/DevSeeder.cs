@@ -49,7 +49,9 @@ public static class DevSeeder
                 {
                     IncomeCategoryID = incomeCategories[0].IncomeCategoryID,
                     IncomeSourceID = incomeSources[0].IncomeSourceID,
-                    Amount = 2500m, Date = date, Note = "Synthetic data",
+                    Amount = 2500m,
+                    Date = date,
+                    Note = "Synthetic data",
                 });
             }
         }
@@ -57,8 +59,10 @@ public static class DevSeeder
         {
             db.Budgets.Add(new Models.Budget
             {
-                ExpenseCategoryID = c.ExpenseCategoryID, Amount = 400m,
-                FromDate = new DateOnly(start.Year, 1, 1), ToDate = new DateOnly(start.Year + 1, 12, 31),
+                ExpenseCategoryID = c.ExpenseCategoryID,
+                Amount = 400m,
+                FromDate = new DateOnly(start.Year, 1, 1),
+                ToDate = new DateOnly(start.Year + 1, 12, 31),
             });
         }
         db.SaveChanges();
