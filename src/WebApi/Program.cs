@@ -13,12 +13,19 @@ builder.Services.AddSwaggerGen(options =>
         options.MapType<DateOnly>(() => new OpenApiSchema { Type = JsonSchemaType.String, Format = "date" });
     }
 );
-builder.Services.AddDbContext<BudgetDbContext>(
-    options => options.UseSqlServer(builder.Configuration.GetConnectionString("BudgetDbConnection")));
+var connectionString = builder.Configuration.GetConnectionString("BudgetDbConnection");
+var isLocalDatabase = LocalDatabaseGuard.EnsureSafe(connectionString);
+builder.Services.AddDbContext<BudgetDbContext>(options => options.UseSqlServer(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddControllers();
 
 var app = builder.Build();
+
+if (app.Environment.IsDevelopment() && isLocalDatabase)
+{
+    using var scope = app.Services.CreateScope();
+    DevSeeder.MigrateAndSeed(scope.ServiceProvider.GetRequiredService<BudgetDbContext>());
+}
 
 // Configure the HTTP request pipeline.
 app.UseSwagger();
