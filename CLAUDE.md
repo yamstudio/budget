@@ -12,7 +12,7 @@ Personal budgeting web app (expenses, incomes, monthly comparison and year-to-da
 
 ## Environments
 - Dev: WSL2 on Arch Linux, zsh. dotnet 10 SDK and node 26 are installed there. (Machine facts verified; CI pins node 25.x and dotnet 10.0.x.)
-- Production: an Azure App Service (Windows/Linux not verified) with Azure SQL/SQL Server, deployed from GitHub Actions on every push to `master`. Access is restricted by the App Service's Entra ID (AD) sign-in to the owner's personal account only; the API itself has no auth or user model, so never expose it outside that layer.
+- Production: an Azure App Service (Windows/Linux not verified) with a SQL Server database (EF Core `UseSqlServer`; where it is hosted is unverified), deployed from GitHub Actions on every push to `master`. Access is restricted by the App Service's Azure AD sign-in (per the owner) to the owner's personal account only; the API itself has no auth or user model, so never expose it outside that layer.
 - Local DB setup is unverified. The connection string `BudgetDbConnection` is not in the repo (likely user-secrets or env var). Ask the user before assuming.
 
 ## Commands (none verified in this session; nothing was installed or run)
@@ -32,7 +32,7 @@ Personal budgeting web app (expenses, incomes, monthly comparison and year-to-da
 
 ## UI code quality
 The owner was an Angular dev when writing the UI; much of it was copy-pasted between files. Treat it as a starter, not a style guide.
-- `Expenses.tsx` and `Incomes.tsx` are near-duplicates (about 70% identical after renaming). Extract shared grid/CRUD components and hooks rather than adding a third copy; the same goes for the two dashboards and `Queries.ts`.
+- `Expenses.tsx` and `Incomes.tsx` are near-duplicates (mostly identical after renaming expense/income; only a few dozen lines differ). Extract shared grid/CRUD components and hooks rather than adding a third copy; the same goes for the two dashboards and `Queries.ts`.
 - Prefer small function components, typed props, TanStack Query for server state, derived values over `useState`+`useEffect`, and the generated client types instead of redefining shapes.
 - When touching a file, leave it cleaner (dedupe, types, naming, lint). Keep refactors scoped to the feature at hand, in separate commits from behavior changes where practical.
 - Add tests for new logic (UI: Vitest + Testing Library would fit Vite; API: xUnit). Neither is set up yet; ask before choosing.
@@ -44,13 +44,13 @@ The owner was an Angular dev when writing the UI; much of it was copy-pasted bet
 - C#: nullable enabled, implicit usings, root namespace `YamStudio.Budget.WebApi`.
 
 ## Git workflow
-Branch off `master`, open a PR, squash/rebase-merge (history is linear, commit titles end with `(#N)`). Pushing to `master` triggers a production deploy, so don't merge without the user's say-so. Commit messages: short imperative summary.
+Branch off `master`, open a PR, merge with a linear history (squash or rebase; which is unverified, commit titles end with `(#N)`). Pushing to `master` triggers a production deploy, so don't merge without the user's say-so. Commit messages: short imperative summary.
 
 ## Known deficiencies / risks
 - No automated tests; CI only builds and deploys (no test, lint or typecheck gate beyond `tsc` in the UI build).
 - Dependencies are bleeding edge (net10, TypeScript 6, ESLint 10, Vite 8, node 25/26) and bumped frequently with no tests to catch breakage. CI uses `npm install` rather than `npm ci`.
 - `src/UI/README.md` is stale Create React App boilerplate (mentions yarn); root README is two lines. Both should be replaced.
 - Swagger/SwaggerUI are enabled in all environments, and `AllowedHosts` is `*`.
-- Controllers are repetitive per-entity CRUD with little validation or error handling (not audited in depth).
+- Controllers are repetitive per-entity CRUD (not audited in depth; validation and error handling not yet reviewed).
 - Deploy workflow runs ARM deployment on every push; `arm-deploy` job runs in parallel with `build`.
 - The generated API client depends on a gitignored swagger file, so regenerating is a manual step easily forgotten after API changes.
