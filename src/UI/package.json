@@ -35,7 +35,7 @@
   "scripts": {
     "start": "vite",
     "build": "tsc && vite build",
-    "lint": "eslint src",
+    "lint": "eslint src --max-warnings 6",
     "prettier": "prettier -w .",
     "serve": "vite preview",
     "genclient": "swagger-typescript-api generate -p swagger/swagger.json -o src/gensrc"

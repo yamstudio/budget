@@ -23,9 +23,9 @@ Personal budgeting web app (expenses, incomes, monthly comparison and year-to-da
 - Design and rollout plan: `docs/repo-hardening-design.md`.
 
 ## Commands
-Verified (2026-11-26, WSL2 Arch): `dotnet build src/WebApi`, `scripts/dev-db.zsh up|down|reset|status`, `scripts/dev-api.zsh` (API on http://localhost:5054, auto-migrates and seeds synthetic data, swagger at `/swagger`). First `up` pulls a large image and starts slowly.
+Verified (2026-11-26, WSL2 Arch): `dotnet build -warnaserror`, `dotnet format --verify-no-changes` (`dotnet format` to fix), in `src/UI`: `npm ci`, `npx tsc --noEmit`, `npm run lint`, `npx prettier --check .`, `npm run build`, `scripts/dev-db.zsh up|down|reset|status`, `scripts/dev-api.zsh` (API on http://localhost:5054, auto-migrates and seeds synthetic data, swagger at `/swagger`). First `up` pulls a large image and starts slowly.
 Unverified:
-- UI: `cd src/UI && npm install && npm start` (Vite dev server proxies `/api` to localhost:5054). `npm run build` (tsc + vite build), `npm run lint`, `npm run prettier`.
+- UI dev server: `cd src/UI && npm start` (Vite proxies `/api` to localhost:5054); the UI against the local API has not been exercised.
 - Regenerate client: `npm run genclient` in `src/UI`. It reads `src/UI/swagger/swagger.json` (gitignored), so first save the running API's Swagger JSON there. Unverified.
 - EF migrations: `dotnet ef` (not verified that the tool is installed).
 - Tests: **none exist** in either project.
@@ -55,10 +55,11 @@ The owner was an Angular dev when writing the UI; much of it was copy-pasted bet
 Branch off `master`, open a PR, squash-merge (confirmed; commit titles end with `(#N)`). Pushing to `master` triggers a production deploy, so don't merge without the user's say-so. Commit messages: short imperative summary.
 
 ## Known deficiencies / risks
-- No automated tests; CI only builds and deploys (no test, lint or typecheck gate beyond `tsc` in the UI build).
-- Dependencies are bleeding edge (net10, TypeScript 6, ESLint 10, Vite 8, node 25/26) and bumped frequently with no tests to catch breakage. CI uses `npm install` rather than `npm ci`.
+- No automated tests yet. CI (`.github/workflows/ci.yml`, required before deploy and on PRs) runs build with `-warnaserror` (includes the NuGet vulnerability audit), `dotnet format --verify-no-changes`, `tsc`, eslint, prettier check and the UI build. Branch protection making it required for merging is a GitHub setting owned by the owner (verify it is on).
+- ESLint has 6 existing warnings (state set in effects, missing hook deps, deprecated React 19 patterns in `Expenses.tsx`, `Incomes.tsx` and others). `npm run lint` is a ratchet: `--max-warnings 6`. Lower the number as they are fixed; never raise it.
+- Dependencies are bleeding edge on purpose (owner prefers newest that works: net10, TypeScript 6, ESLint 10, Vite 8, node 26) and bumped frequently with few tests to catch breakage. EF Core 11 exists but needs .NET 11; stay on the latest 10.x patch until moving the TFM.
 - `src/UI/README.md` is stale Create React App boilerplate (mentions yarn); root README is two lines. Both should be replaced.
 - Swagger/SwaggerUI are enabled in all environments, and `AllowedHosts` is `*`.
 - Controllers are repetitive per-entity CRUD (not audited in depth; validation and error handling not yet reviewed).
-- Deploy workflow runs ARM deployment on every push; `arm-deploy` job runs in parallel with `build`.
+- Deploy workflow runs ARM deployment on every push to `master` (after checks pass).
 - The generated API client depends on a gitignored swagger file, so regenerating is a manual step easily forgotten after API changes.
