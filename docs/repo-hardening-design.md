@@ -16,7 +16,7 @@ Goal: let Claude (and the owner) change, test and ship this app quickly without 
 ## 1. Dev/prod data isolation
 - Local dev and tests use a **local, disposable SQL Server** with fake seed data. The app and Vite still run directly in WSL; only the database needs somewhere to run.
 - Why SQL Server specifically: the app uses the EF Core SQL Server provider and the migrations are SQL Server-specific. A different engine (SQLite, in-memory) would not exercise real migrations or SQL translation.
-- Where it runs (**open decision**, Docker/Podman is not currently installed in the owner's WSL):
+- Where it runs (**decided: option A, Podman**, implemented in `scripts/dev-db.zsh`):
   - A. SQL Server container via Podman or Docker (recommended: reproducible, also what Testcontainers uses in CI and locally). Cost: install a container runtime once.
   - B. A separate small Azure SQL database used only for dev. No local install, but costs money, needs network, and is easy to confuse with prod.
   - C. Native SQL Server on Linux. Unsupported on this distro; not recommended.
@@ -57,6 +57,10 @@ Goal: let Claude (and the owner) change, test and ship this app quickly without 
 5. Migration step in deploy (phase 2) and post-deploy smoke check.
 6. UI dedupe/refactor under test cover, then features.
 
+## Facts checked (read-only, 2026-11-26)
+- Prod DB: Basic tier, 7-day point-in-time restore, no long-term retention, local backup redundancy; server is Azure AD-auth only with public network access enabled. Web app is on the Free tier.
+- The owner's local user-secrets held a connection string (presumably prod). It was not modified. The guard makes it inert for local runs.
+
 ## Open questions
-- Container runtime install (1A) vs separate dev database (1B).
-- Prod DB tier, backup retention, and where it is hosted.
+- Which migration-apply tool for prod (Azure AD auth from WSL is unverified).
+- Whether to remove the prod connection string from local user-secrets once the migration flow is settled.

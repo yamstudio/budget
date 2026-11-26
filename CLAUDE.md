@@ -13,10 +13,18 @@ Personal budgeting web app (expenses, incomes, monthly comparison and year-to-da
 ## Environments
 - Dev: WSL2 on Arch Linux, zsh. dotnet 10 SDK and node 26 are installed there. (Machine facts verified; CI pins node 25.x and dotnet 10.0.x.)
 - Production: an Azure App Service (Windows/Linux not verified) with a SQL Server database (EF Core `UseSqlServer`; where it is hosted is unverified), deployed from GitHub Actions on every push to `master`. Access is restricted by the App Service's Azure AD sign-in (per the owner) to the owner's personal account only; the API itself has no auth or user model, so never expose it outside that layer.
-- Local DB setup is unverified. The connection string `BudgetDbConnection` is not in the repo (likely user-secrets or env var). Ask the user before assuming.
+- Local DB: a throwaway SQL Server container run by Podman (rootless), managed by `scripts/dev-db.zsh`; its generated password lives outside the repo in `~/.config/budget-dev/db.env`. Use `scripts/dev-api.zsh` to run the API against it. The owner's user-secrets may still hold the **production** connection string; the env var from the script overrides it, and the guard below blocks it.
+- Prod database facts (checked via az CLI, read-only): small Basic-tier SQL database, 7-day point-in-time restore, no long-term backup, Azure AD-only auth, public network access enabled.
 
-## Commands (none verified in this session; nothing was installed or run)
-- API: `dotnet build`, `dotnet run --project src/WebApi` (http://localhost:5054, swagger at `/swagger`). Needs a connection string.
+## Data safety rules (read first)
+- Never run the API, tests, `dotnet ef`, or any script against a non-local database. `LocalDatabaseGuard` enforces this at startup (only Azure App Service or `BUDGET_ALLOW_REMOTE_DB=1` bypasses it). Never set that variable yourself.
+- Never apply migrations to production, deploy, merge to `master`, or touch CI/infra/secrets without the owner's explicit say-so. Migration procedure: `docs/migrations.md`.
+- Never print or commit connection strings, even the local one. Never commit real financial data.
+- Design and rollout plan: `docs/repo-hardening-design.md`.
+
+## Commands
+Verified (2026-11-26, WSL2 Arch): `dotnet build src/WebApi`, `scripts/dev-db.zsh up|down|reset|status`, `scripts/dev-api.zsh` (API on http://localhost:5054, auto-migrates and seeds synthetic data, swagger at `/swagger`). First `up` pulls a large image and starts slowly.
+Unverified:
 - UI: `cd src/UI && npm install && npm start` (Vite dev server proxies `/api` to localhost:5054). `npm run build` (tsc + vite build), `npm run lint`, `npm run prettier`.
 - Regenerate client: `npm run genclient` in `src/UI`. It reads `src/UI/swagger/swagger.json` (gitignored), so first save the running API's Swagger JSON there. Unverified.
 - EF migrations: `dotnet ef` (not verified that the tool is installed).
@@ -44,7 +52,7 @@ The owner was an Angular dev when writing the UI; much of it was copy-pasted bet
 - C#: nullable enabled, implicit usings, root namespace `YamStudio.Budget.WebApi`.
 
 ## Git workflow
-Branch off `master`, open a PR, merge with a linear history (squash or rebase; which is unverified, commit titles end with `(#N)`). Pushing to `master` triggers a production deploy, so don't merge without the user's say-so. Commit messages: short imperative summary.
+Branch off `master`, open a PR, squash-merge (confirmed; commit titles end with `(#N)`). Pushing to `master` triggers a production deploy, so don't merge without the user's say-so. Commit messages: short imperative summary.
 
 ## Known deficiencies / risks
 - No automated tests; CI only builds and deploys (no test, lint or typecheck gate beyond `tsc` in the UI build).
