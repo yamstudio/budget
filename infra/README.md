@@ -34,7 +34,7 @@ paste plan output anywhere public, and never put a secret in an app setting: Ter
 
 ## In CI
 
-- `infra-plan.yml`: read-only `terraform plan` on pull requests that touch `infra/`, as `belfast-plan`.
+- `infra-plan.yml`: read-only `terraform plan -refresh=false` on pull requests that touch `infra/`, as `belfast-plan` (it shows what the change would do relative to the last applied state; drift is caught by the release).
 - `deploy.yml`, `infra` job: on a release, if `infra/` changed since the previous release, an approval-gated
   `terraform apply` as `belfast-infra`. It refuses to delete or replace anything; apply such a change by hand.
 - `ci.yml`: `terraform fmt -check` and `validate` for both layers (no credentials).

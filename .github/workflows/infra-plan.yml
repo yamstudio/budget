@@ -1,7 +1,10 @@
 name: Infra plan
 
 # Read-only `terraform plan` for pull requests that touch infra/. Runs as the belfast-plan identity (Reader plus read
-# access to the state; GitHub OIDC, no secret), takes no state lock and applies nothing. The plan goes to the log, where
+# access to the state; GitHub OIDC, no secret), takes no state lock and applies nothing. It uses -refresh=false: it shows
+# what the PR would change relative to the last applied state. Refreshing would need Microsoft.Web/sites/config/list/action,
+# which also lists the web app's SCM publishing credentials, and PR jobs must never be able to read those. Drift is caught
+# by the release's infra job, which refreshes as belfast-infra. The plan goes to the log, where
 # every production name and id is masked; see docs/identities.md. Fork PRs get no secrets or OIDC token and are skipped.
 on:
   pull_request:
@@ -38,13 +41,13 @@ jobs:
           tf-vars: ${{ secrets.TF_VARS }}
           tf-backend: ${{ secrets.TF_BACKEND }}
 
-      - name: Plan (read-only)
+      - name: Plan (read-only, against the last applied state)
         working-directory: infra
         shell: bash
         run: |
           terraform init -input=false -no-color -backend-config=backend.hcl
           set +e
-          terraform plan -input=false -no-color -lock=false -detailed-exitcode
+          terraform plan -input=false -no-color -lock=false -refresh=false -detailed-exitcode
           rc=$?
           set -e
           case "$rc" in

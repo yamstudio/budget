@@ -146,8 +146,10 @@ also needs its own SQL user, never `belfast-migrate`.
 
 ## Known limits
 
-- `belfast-plan` may need more than Reader to read the web app's configuration; add the narrowest extra read right when
-  the first PR plan shows a permission error.
+- `belfast-plan` stays Reader, so its PR plan runs with `-refresh=false` (changes relative to the last applied state; the
+  release's `infra` job refreshes and catches drift). Reading the web app's configuration needs
+  `Microsoft.Web/sites/config/list/action`, which also lists the SCM publishing credentials; do not grant it to a
+  PR-triggered identity.
 - The `belfast-migrate` DDL permission is only proven by the first real migration.
 - `belfast-infra` can read the web app's settings. They hold no secrets (passwordless SQL connection string, managed-identity
   sign-in), so keep it that way.
