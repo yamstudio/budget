@@ -71,6 +71,9 @@ minutes, so the migrate job logs in again right before the database work.
 
 Consequences worth remembering:
 - `deploy` cannot alter the schema, and `migrate` cannot ship code.
+- **There is no deploy password.** SCM (Kudu) and FTP basic authentication are both disabled on the web app, so there is no publish
+  profile to leak: deploys authenticate with Entra as `belfast-deploy`. If a deploy ever fails to authenticate, do not turn basic
+  auth back on as a shortcut; check that identity's role on the web app.
 - **CI cannot reach the Terraform state account or the identity layer's state.** `infra` has Contributor on the three
   resources it manages, *not* on the resource group, because the state account lives in that group: a group-wide
   Contributor could re-enable shared-key access and read state. The state roles are scoped to the `tfstate` container
