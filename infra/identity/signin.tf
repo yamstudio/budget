@@ -12,7 +12,7 @@ resource "azurerm_user_assigned_identity" "signin" {
 
 # Trust: the sign-in app registration accepts a token from exactly this identity.
 resource "azuread_application_federated_identity_credential" "signin" {
-  application_id = "/applications/${var.signin_app_object_id}"
+  application_id = azuread_application.web.id
   display_name   = "web-app-managed-identity"
   description    = "belfast-web-signin (user-assigned managed identity attached to the web app)"
   issuer         = "https://login.microsoftonline.com/${var.tenant_id}/v2.0"

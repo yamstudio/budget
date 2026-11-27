@@ -22,6 +22,18 @@ we pre-approved. There are four CI identities, one per **privilege boundary**, e
 The names say *what they protect*, not where they are called from. Each identity serves one purpose; never widen one to
 cover another.
 
+## Naming
+
+Entra's app list is flat, so every name is prefixed with the app and says what the thing is for. Never use a generic name.
+
+| Thing | Pattern | Examples |
+|---|---|---|
+| Resource group | `HMS-<Ship>` | `HMS-Belfast` |
+| Azure resources | prefixed with the app (no hyphen: some names must be globally unique) | `belfastweb` |
+| CI app registrations | `<app>-<purpose>` | `belfast-plan`, `belfast-infra`, `belfast-deploy`, `belfast-migrate` |
+| User sign-in app registration | `<app>-web` | `belfast-web` |
+| Managed identities | `<app>-<what it does>` | `belfast-web-signin` |
+
 ## Two Terraform layers, two appliers
 
 ```
@@ -83,7 +95,7 @@ Consequences worth remembering:
 
 ## How the web app signs users in (no secret)
 
-The login page is App Service's built-in Entra sign-in, backed by an app registration. The app proves itself to that
+The login page is App Service's built-in Entra sign-in, backed by the `belfast-web` app registration (`infra/identity/signin_app.tf`). The app proves itself to that
 registration with a **user-assigned managed identity**, `belfast-web-signin` (`infra/identity/signin.tf`), not a client
 secret:
 
@@ -118,7 +130,7 @@ group for the migration jobs. Fork PRs get no secrets or OIDC token and are skip
 ## Rebuilding from scratch (one-time steps)
 
 1. **Identity layer** (owner, laptop): `cd infra/identity`, `az login`, `terraform init -backend-config=backend.hcl`,
-   `terraform plan`, read it, `terraform apply`. `terraform output client_ids` lists the four client ids. It also needs
+   `terraform plan`, read it, `terraform apply`. `terraform output client_ids` lists the four client ids, and `terraform output signin_client_id` is the sign-in app registration's client id, which goes into `infra/terraform.tfvars` as `aad_client_id` (and the `TF_VARS` secret). It also needs
    its own state container (`tfstate-identity`) to exist.
 2. **Database user** for `belfast-migrate`. Terraform cannot create SQL users and the server is Entra-only, so connect to
    the `budget` database as the server's Entra admin (the owner) and run:
@@ -136,7 +148,7 @@ group for the migration jobs. Fork PRs get no secrets or OIDC token and are skip
 
 ## Do not
 
-- **Rename `Belfast Web Role Account`.** It is the Entra app registration behind the web app's login page, not a CI identity.
+- **Delete or recreate `belfast-web`.** It is the Entra app registration behind the web app's login page (`infra/identity/signin_app.tf`, with `prevent_destroy`), not a CI identity; losing it locks everyone out of the app.
 - **Make a CI identity able to apply `infra/identity/`.** See the rule above.
 - **Commit** `terraform.tfvars`, `backend.hcl`, state, or any name or id from them.
 

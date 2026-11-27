@@ -52,6 +52,11 @@ variable "app_owner_object_id" {
   description = "Object id of the one user allowed to sign in to the app (and owner of the identities)."
 }
 
+variable "signin_scope_id" {
+  type        = string
+  description = "Id of the sign-in app registration's user_impersonation permission scope (tenant-specific, so not in the repo)."
+}
+
 variable "signin_app_object_id" {
   type        = string
   description = "Object id of the Entra app REGISTRATION behind the web app sign-in (not the client id, not the enterprise app)."
