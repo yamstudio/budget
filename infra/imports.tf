@@ -10,16 +10,6 @@ import {
 }
 
 import {
-  to = azurerm_mssql_server.sql
-  id = "/subscriptions/${var.subscription_id}/resourceGroups/${var.sql_resource_group}/providers/Microsoft.Sql/servers/${var.sql_server_name}"
-}
-
-import {
-  to = azurerm_mssql_database.budget
-  id = "/subscriptions/${var.subscription_id}/resourceGroups/${var.sql_resource_group}/providers/Microsoft.Sql/servers/${var.sql_server_name}/databases/budget"
-}
-
-import {
-  to = azurerm_mssql_firewall_rule.allow_azure_services
-  id = "/subscriptions/${var.subscription_id}/resourceGroups/${var.sql_resource_group}/providers/Microsoft.Sql/servers/${var.sql_server_name}/firewallRules/AllowAllWindowsAzureIps"
+  to = azurerm_mssql_database.budget_db
+  id = "/subscriptions/${var.subscription_id}/resourceGroups/${var.web_resource_group}/providers/Microsoft.Sql/servers/${var.sql_server_name}/databases/budget"
 }
