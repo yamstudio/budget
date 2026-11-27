@@ -64,3 +64,9 @@ Goal: let Claude (and the owner) change, test and ship this app quickly without 
 ## Open questions
 - Which migration-apply tool for prod (Azure AD auth from WSL is unverified).
 - Whether to remove the prod connection string from local user-secrets once the migration flow is settled.
+
+## Accepted risks and long-term plans (2026-11-26 review)
+Honest status after the foundation work: solid for backend, data and refactoring work; weaker for UI-heavy work and for enforcement. The owner accepted the following for now; the authoritative short list lives in `CLAUDE.md`.
+- Long term: limited Azure identity for Claude sessions (the dev machine's `az` login is subscription Owner); VM + Docker + logging for production observability and staging.
+- Accepted: unenforced agent rules (only branch protection is hard), no one-shot local check script, no API client drift check, narrow API tests.
+- UI visibility: `scripts/ui-screenshot.zsh` (Windows Edge/Chrome from WSL, headless screenshots). Interactive Playwright tests are deferred: under WSL NAT mode a Windows browser's debug port is unreachable from WSL (mirrored networking or a Linux Chromium would fix that).
