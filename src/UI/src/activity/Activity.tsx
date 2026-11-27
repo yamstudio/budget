@@ -3,6 +3,7 @@ import { PlusOutlined, SearchOutlined } from '@ant-design/icons'
 import { Alert, Empty, FloatButton, Grid, Input, Segmented, Spin, Typography } from 'antd'
 import { useSearchParams } from 'react-router'
 import DateRangeControl from '../DateRangeControl'
+import FilterPanel, { filterField, lookupOptions } from '../FilterPanel'
 import { formatDate, resolveRange } from '../dateRange'
 import {
   useExpenseCategories,
@@ -16,9 +17,9 @@ import {
 import ActivityList from './ActivityList'
 import EntryDrawer, { addState } from './EntryDrawer'
 import type { DrawerState } from './EntryDrawer'
-import { buildActivity, filterActivity, groupByDate, nameMap, summarize } from './activityItems'
+import { buildActivity, filterActivity, groupByDate, hasExpenseFilters, nameMap, summarize } from './activityItems'
 import type { ActivityItem, NameMaps, TypeFilter } from './activityItems'
-import { parseActivityParams, toActivitySearch } from './activityParams'
+import { activeFilterCount, parseActivityParams, toActivitySearch } from './activityParams'
 import type { ActivityParams } from './activityParams'
 import { emptyValues } from './entryValues'
 
@@ -52,8 +53,8 @@ const Activity = () => {
     [expenseCategories, vendors, paymentMethods, incomeCategories, incomeSources]
   )
   const visible = useMemo(
-    () => filterActivity(buildActivity(expenses.data, incomes.data, names), { type: params.type, q: params.q }),
-    [expenses.data, incomes.data, names, params.type, params.q]
+    () => filterActivity(buildActivity(expenses.data, incomes.data, names), params),
+    [expenses.data, incomes.data, names, params]
   )
   const groups = useMemo(() => groupByDate(visible, new Date()), [visible])
   const { count, spent, earned } = summarize(visible)
@@ -85,6 +86,33 @@ const Activity = () => {
           onChange={(e) => update({ q: e.target.value })}
         />
 
+        <div style={{ marginTop: 12 }}>
+          <FilterPanel
+            narrow={narrow}
+            count={activeFilterCount(params)}
+            fields={[
+              filterField({
+                placeholder: 'Payment methods',
+                options: lookupOptions(paymentMethods, (m) => m.paymentMethodID),
+                value: params.paymentMethodIds,
+                onChange: (paymentMethodIds) => update({ paymentMethodIds }),
+              }),
+              filterField({
+                placeholder: 'Vendors',
+                options: lookupOptions(vendors, (v) => v.vendorID),
+                value: params.vendorIds,
+                onChange: (vendorIds) => update({ vendorIds }),
+              }),
+              filterField({
+                placeholder: 'Categories',
+                options: lookupOptions(expenseCategories, (c) => c.expenseCategoryID),
+                value: params.categoryIds,
+                onChange: (categoryIds) => update({ categoryIds }),
+              }),
+            ]}
+          />
+        </div>
+
         {expenses.isError || incomes.isError ? (
           <Alert type="error" showIcon message="Could not load the entries." style={{ marginTop: 16 }} />
         ) : !ready ? (
@@ -96,6 +124,11 @@ const Activity = () => {
               {spent > 0 && ` · ${money.format(spent)} spent`}
               {earned > 0 && ` · ${money.format(earned)} earned`}
             </Typography.Text>
+            {hasExpenseFilters(params) && params.type !== 'expense' && (
+              <Typography.Text type="secondary" style={{ display: 'block', margin: '2px 4px 0' }}>
+                Card, vendor and category filters apply to expenses, so incomes are hidden.
+              </Typography.Text>
+            )}
             {groups.length === 0 ? (
               <Empty description="Nothing here for this range and search." style={{ marginTop: 48 }} />
             ) : (

@@ -1,8 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import type { Expense, ExpenseTemplate, Income } from '../gensrc/Api'
-import { buildActivity, dateLabel, filterActivity, formatEntryAmount, groupByDate, nameMap, summarize } from './activityItems'
+import {
+  buildActivity,
+  dateLabel,
+  filterActivity,
+  formatEntryAmount,
+  groupByDate,
+  hasExpenseFilters,
+  nameMap,
+  summarize,
+} from './activityItems'
 import type { NameMaps } from './activityItems'
-import { parseActivityParams, toActivitySearch } from './activityParams'
+import { activeFilterCount, parseActivityParams, toActivitySearch } from './activityParams'
 import {
   duplicateValues,
   emptyValues,
@@ -89,7 +98,9 @@ describe('filterActivity', () => {
     [income(3, '2026-11-03')],
     names
   )
-  const keys = (type: 'all' | 'expense' | 'income', q = '') => filterActivity(items, { type, q }).map((i) => i.key)
+  const none = { categoryIds: [], vendorIds: [], paymentMethodIds: [] }
+  const keys = (type: 'all' | 'expense' | 'income', q = '', extra: Partial<typeof none> = {}) =>
+    filterActivity(items, { type, q, ...none, ...extra }).map((i) => i.key)
 
   it('filters by kind', () => {
     expect(keys('income')).toEqual(['income-3'])
@@ -103,6 +114,23 @@ describe('filterActivity', () => {
     expect(keys('all', 'cake')).toEqual(['expense-1'])
     expect(keys('all', '12.50')).toEqual(['expense-1'])
     expect(keys('all', '  ')).toHaveLength(3)
+  })
+
+  it('filters expenses by card, vendor and category, and then leaves incomes out', () => {
+    const two = buildActivity(
+      [expense(1, '2026-11-01', 5, { paymentMethodID: 1 }), expense(2, '2026-11-02', 6, { paymentMethodID: 2, vendorID: 2 })],
+      [income(3, '2026-11-03')],
+      names
+    )
+    const k = (extra: Partial<Parameters<typeof filterActivity>[1]>) =>
+      filterActivity(two, { type: 'all', q: '', categoryIds: [], vendorIds: [], paymentMethodIds: [], ...extra }).map((i) => i.key)
+    expect(k({})).toEqual(['income-3', 'expense-2', 'expense-1'])
+    expect(k({ paymentMethodIds: [2] })).toEqual(['expense-2'])
+    expect(k({ paymentMethodIds: [1, 2] })).toEqual(['expense-2', 'expense-1'])
+    expect(k({ vendorIds: [1] })).toEqual(['expense-1'])
+    expect(k({ vendorIds: [1], paymentMethodIds: [2] })).toEqual([]) // filters combine with AND
+    expect(k({ categoryIds: [1], q: 'noodle' })).toEqual(['expense-2'])
+    expect(k({ paymentMethodIds: [99] })).toEqual([])
   })
 })
 
@@ -220,7 +248,23 @@ describe('activity params', () => {
 
   it('round-trips and omits defaults', () => {
     expect(toActivitySearch(parse('')).toString()).toBe('')
-    const state = { range: 'custom' as const, from: '2026-01-01', to: '2026-02-01', type: 'income' as const, q: 'pay check' }
+    const state = {
+      range: 'custom' as const,
+      from: '2026-01-01',
+      to: '2026-02-01',
+      type: 'expense' as const,
+      q: 'pay check',
+      categoryIds: [4],
+      vendorIds: [2, 3],
+      paymentMethodIds: [1],
+    }
     expect(parseActivityParams(toActivitySearch(state))).toEqual(state)
+  })
+
+  it('counts filter kinds, not values, and knows when incomes are excluded', () => {
+    expect(activeFilterCount(parse(''))).toBe(0)
+    expect(activeFilterCount(parse('pay=1&pay=2&vendor=3'))).toBe(2)
+    expect(hasExpenseFilters(parse('pay=1'))).toBe(true)
+    expect(hasExpenseFilters(parse('type=income&q=x'))).toBe(false)
   })
 })

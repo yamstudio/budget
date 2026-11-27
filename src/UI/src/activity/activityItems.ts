@@ -65,16 +65,42 @@ export const buildActivity = (expenses: Expense[] = [], incomes: Income[] = [], 
     (a, b) => b.date.localeCompare(a.date) || entryId(b) - entryId(a) || (a.kind === b.kind ? 0 : a.kind === 'income' ? -1 : 1)
   )
 
-export const filterActivity = (items: ActivityItem[], { type, q }: { type: TypeFilter; q: string }): ActivityItem[] => {
-  const needle = q.trim().toLowerCase()
-  return items.filter(
-    (item) =>
-      (type === 'all' || item.kind === type) &&
-      (needle === '' ||
-        [item.title, item.category, item.method ?? '', item.note, item.amount.toFixed(2)].some((text) =>
-          text.toLowerCase().includes(needle)
-        ))
-  )
+export interface ActivityFilter {
+  type: TypeFilter
+  q: string
+  /** Only expenses have these; when any is set, incomes are left out. Empty means "any". */
+  categoryIds: number[]
+  vendorIds: number[]
+  paymentMethodIds: number[]
+}
+
+/** True when the filter only makes sense for expenses (a card, vendor or expense category was chosen). */
+export const hasExpenseFilters = ({
+  categoryIds,
+  vendorIds,
+  paymentMethodIds,
+}: Pick<ActivityFilter, 'categoryIds' | 'vendorIds' | 'paymentMethodIds'>) =>
+  categoryIds.length + vendorIds.length + paymentMethodIds.length > 0
+
+export const filterActivity = (items: ActivityItem[], filter: ActivityFilter): ActivityItem[] => {
+  const needle = filter.q.trim().toLowerCase()
+  const matches = (ids: number[], id: number | undefined) => ids.length === 0 || (id !== undefined && ids.includes(id))
+  return items.filter((item) => {
+    if (filter.type !== 'all' && item.kind !== filter.type) return false
+    if (item.kind === 'income') {
+      if (hasExpenseFilters(filter)) return false
+    } else if (
+      !matches(filter.categoryIds, item.entry.expenseCategoryID) ||
+      !matches(filter.vendorIds, item.entry.vendorID) ||
+      !matches(filter.paymentMethodIds, item.entry.paymentMethodID)
+    ) {
+      return false
+    }
+    return (
+      needle === '' ||
+      [item.title, item.category, item.method ?? '', item.note, item.amount.toFixed(2)].some((text) => text.toLowerCase().includes(needle))
+    )
+  })
 }
 
 export const summarize = (items: ActivityItem[]) => ({

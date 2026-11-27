@@ -1,5 +1,6 @@
 import { DateRangeParams, parseDateRange, writeDateRange } from '../dateRange'
 import { ExpenseGrouping, ExpenseNecessity } from '../gensrc/Api'
+import { parseIds, writeIds } from '../urlParams'
 
 export const VIEWS = ['breakdown', 'flow', 'trends', 'budget'] as const
 export type InsightsView = (typeof VIEWS)[number]
@@ -25,7 +26,6 @@ export const DEFAULT_PARAMS: InsightsParams = {
 
 const oneOf = <T extends string>(allowed: readonly T[], value: string | null, fallback: T): T =>
   allowed.includes(value as T) ? (value as T) : fallback
-const ids = (values: string[]) => [...new Set(values.map(Number).filter((n) => Number.isInteger(n) && n >= 0))]
 
 /** Reads the page state from the URL; unknown or malformed values fall back to defaults so a hand-edited link never breaks the page. */
 export const parseInsightsParams = (search: URLSearchParams): InsightsParams => {
@@ -33,9 +33,9 @@ export const parseInsightsParams = (search: URLSearchParams): InsightsParams => 
     view: oneOf(VIEWS, search.get('view'), DEFAULT_PARAMS.view),
     ...parseDateRange(search, DEFAULT_PARAMS.range),
     groupBy: oneOf(Object.values(ExpenseGrouping), search.get('by'), DEFAULT_PARAMS.groupBy),
-    categoryIds: ids(search.getAll('cat')),
-    vendorIds: ids(search.getAll('vendor')),
-    paymentMethodIds: ids(search.getAll('pay')),
+    categoryIds: parseIds(search, 'cat'),
+    vendorIds: parseIds(search, 'vendor'),
+    paymentMethodIds: parseIds(search, 'pay'),
     necessities: [
       ...new Set(
         search.getAll('nec').filter((n): n is ExpenseNecessity => Object.values(ExpenseNecessity).includes(n as ExpenseNecessity))
@@ -50,9 +50,9 @@ export const toSearchParams = (params: InsightsParams): URLSearchParams => {
   if (params.view !== DEFAULT_PARAMS.view) search.set('view', params.view)
   writeDateRange(search, params, DEFAULT_PARAMS.range)
   if (params.groupBy !== DEFAULT_PARAMS.groupBy) search.set('by', params.groupBy)
-  params.categoryIds.forEach((id) => search.append('cat', String(id)))
-  params.vendorIds.forEach((id) => search.append('vendor', String(id)))
-  params.paymentMethodIds.forEach((id) => search.append('pay', String(id)))
+  writeIds(search, 'cat', params.categoryIds)
+  writeIds(search, 'vendor', params.vendorIds)
+  writeIds(search, 'pay', params.paymentMethodIds)
   params.necessities.forEach((n) => search.append('nec', n))
   return search
 }
