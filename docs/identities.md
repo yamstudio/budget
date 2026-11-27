@@ -62,6 +62,7 @@ A workflow job needs `permissions: { id-token: write, contents: read }` to reque
 | infra | web resource group | Reader (only to look the group up) |
 | infra | App Service plan, web app, SQL server (each one) | Contributor |
 | infra | state container `tfstate` | Storage Blob Data Contributor |
+| infra | the `belfast-web-signin` identity | Managed Identity Operator (so it can attach it to the web app) |
 | deploy | the web app only | Website Contributor |
 | migrate | SQL server | `belfast-sql-firewall-rule-writer` (custom: firewall rules read/write/delete only) |
 | migrate | `budget` database | `db_ddladmin`, `db_datareader`, `db_datawriter` (a SQL user, **manual**, see below) |
@@ -99,6 +100,29 @@ Consequences worth remembering:
 5. **Clean up** only after the new pipeline is proven: delete the old repo secrets and the old Entra client secret
    on the sign-in app.
 
+## How the web app signs users in (no secret)
+
+The login page is App Service's built-in Entra sign-in, backed by an app registration. It used to authenticate to Entra
+with a client secret stored as an app setting. It now uses a **user-assigned managed identity**, `belfast-web-signin`
+(created in `infra/identity/signin.tf`):
+
+1. The app registration has a *federated credential* trusting that identity (also in `signin.tf`).
+2. The web app has that identity attached (`infra/main.tf`, `identity` block) next to its system-assigned one, which
+   is used for SQL and is a different thing. Microsoft advises attaching this identity to nothing else.
+3. The app setting `OVERRIDE_USE_MI_FIC_ASSERTION_CLIENTID` holds the identity's **client id** (not the app
+   registration's), is slot-sticky, and is named as the auth config's "client secret setting name". That is what makes
+   App Service use the identity instead of a secret.
+
+Apply order matters: the identity layer first (it creates the identity), then `infra/` (it looks it up).
+
+## Removing the old secret
+
+After sign-in is verified on the managed identity (use a private window and `/.auth/logout` first, an old session
+cookie lasts 8 hours and would hide a broken credential): delete the `ignore_changes` block, the
+`MICROSOFT_PROVIDER_AUTHENTICATION_SECRET` entry in `sticky_settings` in `infra/main.tf` and apply (Terraform then removes
+the setting), then delete the old client secret from the app registration (Entra portal, or `az ad app credential
+delete`). Rollback before that point: point `client_secret_setting_name` back at the old setting and apply.
+
 ## Do not
 
 - **Delete or edit `GitHub-Automation`.** It is the *old* shared identity, also used by other projects (it has rights
@@ -122,7 +146,8 @@ from `infra/` to `infra/identity/`. `infra/identity/imports.tf` adopts them; `in
 
 ## Known gotchas and open follow-ups
 
-- **Do not enable PR-time `terraform plan` in CI until the Entra client secret is out of the web app's settings.**
+- **Do not enable PR-time `terraform plan` in CI until the OLD Entra client secret is gone from the web app's settings
+  (see "Removing the old secret").**
   The secret is an app setting; a plan that shows any `app_settings` difference prints it, and Actions logs on a public
   repo are public. The fix is a federated credential for the sign-in app (no secret), then delete the setting and the
   `ignore_changes` block in `infra/main.tf`. That is the step *before* turning on plan in CI.

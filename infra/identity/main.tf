@@ -121,6 +121,7 @@ locals {
     web_app            = data.azurerm_windows_web_app.web.id
     sql_server         = data.azurerm_mssql_server.sql.id
     tfstate_container  = data.azurerm_storage_container.tfstate.resource_manager_id
+    signin_identity    = azurerm_user_assigned_identity.signin.id
   }
 
   # THE access table. One row = one grant. If it is not in this list, the identity cannot do it.
@@ -142,6 +143,8 @@ locals {
     { identity = "infra", scope = "web_app", role = "Contributor" },
     { identity = "infra", scope = "sql_server", role = "Contributor" },
     { identity = "infra", scope = "tfstate_container", role = "Storage Blob Data Contributor" },
+    # Lets infra attach the sign-in identity to the web app (and nothing else about it).
+    { identity = "infra", scope = "signin_identity", role = "Managed Identity Operator" },
 
     { identity = "deploy", scope = "web_app", role = "Website Contributor" },
 
