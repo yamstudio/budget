@@ -13,19 +13,20 @@ variable "web_resource_group" {
   description = "Resource group holding the web app, its plan and the Terraform state account."
 }
 
-variable "sql_resource_group" {
-  type        = string
-  description = "Resource group holding the shared SQL server."
-}
-
 variable "sql_server_name" {
   type        = string
-  description = "Logical SQL server name. Kept out of the repo: the repo is public."
+  description = "Name of the SQL server dedicated to this app (in web_resource_group). Kept out of the repo: the repo is public."
 }
 
 variable "tfstate_storage_account" {
   type        = string
   description = "Storage account holding Terraform state (in web_resource_group)."
+}
+
+variable "tfstate_container" {
+  type        = string
+  description = "Blob container holding the APP layer's state (infra/budget.tfstate). Not this layer's state."
+  default     = "tfstate"
 }
 
 variable "github_repo" {

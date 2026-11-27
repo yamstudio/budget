@@ -33,9 +33,14 @@ data "azurerm_resource_group" "web" {
   name = var.web_resource_group
 }
 
+data "azurerm_service_plan" "plan" {
+  name                = "belfast"
+  resource_group_name = var.web_resource_group
+}
+
 data "azurerm_mssql_server" "sql" {
   name                = var.sql_server_name
-  resource_group_name = var.sql_resource_group
+  resource_group_name = var.web_resource_group
 }
 
 data "azurerm_windows_web_app" "web" {
@@ -46,6 +51,13 @@ data "azurerm_windows_web_app" "web" {
 data "azurerm_storage_account" "tfstate" {
   name                = var.tfstate_storage_account
   resource_group_name = var.web_resource_group
+}
+
+# The container holding the app layer's state (../budget.tfstate). The identity layer's own state is in a
+# DIFFERENT container that no CI identity has any right on.
+data "azurerm_storage_container" "tfstate" {
+  name               = var.tfstate_container
+  storage_account_id = data.azurerm_storage_account.tfstate.id
 }
 
 # --- The identities --------------------------------------------------------------------------------
@@ -84,7 +96,7 @@ resource "azuread_application_federated_identity_credential" "ci" {
 
 # belfast-migrate opens and closes its own temporary SQL firewall rule for the runner (see
 # .github/actions/prod-sql) and nothing else on the server. Tighter than the built-in "SQL Server
-# Contributor". The server is shared with other projects, so this applies server-wide: an accepted overlap.
+# Contributor". The server holds only this app's database.
 resource "azurerm_role_definition" "sql_firewall_rule_writer" {
   name        = "belfast-sql-firewall-rule-writer"
   scope       = data.azurerm_mssql_server.sql.id
@@ -105,22 +117,31 @@ resource "azurerm_role_definition" "sql_firewall_rule_writer" {
 locals {
   scopes = {
     web_resource_group = data.azurerm_resource_group.web.id
-    sql_server         = data.azurerm_mssql_server.sql.id
+    service_plan       = data.azurerm_service_plan.plan.id
     web_app            = data.azurerm_windows_web_app.web.id
-    tfstate_account    = data.azurerm_storage_account.tfstate.id
+    sql_server         = data.azurerm_mssql_server.sql.id
+    tfstate_container  = data.azurerm_storage_container.tfstate.resource_manager_id
   }
 
   # THE access table. One row = one grant. If it is not in this list, the identity cannot do it.
+  #
+  # Deliberately NOT Contributor on the whole resource group: the Terraform state account lives in it, and a
+  # Contributor there could re-enable shared-key access and read the state (which can hold secrets). So CI
+  # gets Contributor on the specific resources it manages, and Reader on the group (needed to look it up).
+  # Consequence: CI can change those existing resources but cannot create a new top-level resource; adding
+  # one is an owner step (apply it once from the laptop, or add a row here).
+  #
   # Database-level rights for belfast-migrate (a SQL user in `budget`) cannot be expressed in Terraform:
   # see docs/identities.md, "Manual steps".
   grants = [
     { identity = "plan", scope = "web_resource_group", role = "Reader" },
-    { identity = "plan", scope = "sql_server", role = "Reader" },
-    { identity = "plan", scope = "tfstate_account", role = "Storage Blob Data Reader" },
+    { identity = "plan", scope = "tfstate_container", role = "Storage Blob Data Reader" },
 
-    { identity = "infra", scope = "web_resource_group", role = "Contributor" },
+    { identity = "infra", scope = "web_resource_group", role = "Reader" },
+    { identity = "infra", scope = "service_plan", role = "Contributor" },
+    { identity = "infra", scope = "web_app", role = "Contributor" },
     { identity = "infra", scope = "sql_server", role = "Contributor" },
-    { identity = "infra", scope = "tfstate_account", role = "Storage Blob Data Contributor" },
+    { identity = "infra", scope = "tfstate_container", role = "Storage Blob Data Contributor" },
 
     { identity = "deploy", scope = "web_app", role = "Website Contributor" },
 

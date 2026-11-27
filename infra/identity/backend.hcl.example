@@ -1,4 +1,4 @@
 resource_group_name  = "<rg holding the state account>"
 storage_account_name = "<state storage account>"
-container_name       = "tfstate"
+container_name       = "tfstate-identity"
 key                  = "identity.tfstate"
