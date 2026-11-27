@@ -52,6 +52,16 @@ export interface Budget {
   expenseCategory?: ExpenseCategory
 }
 
+export interface BudgetComparisonRow {
+  /** @format int32 */
+  key: number
+  label: string | null
+  /** @format double */
+  budget: number
+  /** @format double */
+  actual: number
+}
+
 export interface Expense {
   /** @format int32 */
   expenseID?: number
@@ -925,6 +935,34 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     ) =>
       this.request<BreakdownRow[], any>({
         path: `/api/insights/incomes`,
+        method: 'GET',
+        query: query,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags InsightsApi
+     * @name GetBudgetComparison
+     * @request GET:/api/insights/budget
+     */
+    getBudgetComparison: (
+      query: {
+        /** @format date */
+        fromDate: string
+        /** @format date */
+        toDate: string
+        expenseCategoryIds?: number[]
+        vendorIds?: number[]
+        paymentMethodIds?: number[]
+        necessities?: ExpenseNecessity[]
+      },
+      params: RequestParams = {}
+    ) =>
+      this.request<BudgetComparisonRow[], any>({
+        path: `/api/insights/budget`,
         method: 'GET',
         query: query,
         format: 'json',

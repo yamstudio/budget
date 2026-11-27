@@ -4,6 +4,7 @@ import dayjs from 'dayjs'
 import { useSearchParams } from 'react-router'
 import { ExpenseCategory, ExpenseGrouping, ExpenseNecessity, IncomeGrouping, PaymentMethod, Vendor } from '../gensrc/Api'
 import {
+  useBudgetComparison,
   useExpenseBreakdown,
   useExpenseCategories,
   useIncomeBreakdown,
@@ -14,6 +15,8 @@ import {
 import EChart from './EChart'
 import {
   breakdownHeight,
+  budgetHeight,
+  budgetOption,
   breakdownOption,
   buildFlow,
   colorMap,
@@ -60,15 +63,19 @@ const Insights = ({ queryClient }: InsightsProps) => {
   const { fromDate, toDate } = useMemo(() => resolveRange(params, new Date()), [params])
   const range = { fromDate: formatDate(fromDate), toDate: formatDate(toDate) }
   const isFlow = params.view === 'flow'
-  const expenseQuery = useExpenseBreakdown({
-    ...range,
-    groupBy: params.groupBy,
-    byMonth: params.view === 'trends',
-    expenseCategoryIds: params.categoryIds,
-    vendorIds: params.vendorIds,
-    paymentMethodIds: params.paymentMethodIds,
-    necessities: params.necessities,
-  })
+  const isBudget = params.view === 'budget'
+  const expenseQuery = useExpenseBreakdown(
+    {
+      ...range,
+      groupBy: params.groupBy,
+      byMonth: params.view === 'trends',
+      expenseCategoryIds: params.categoryIds,
+      vendorIds: params.vendorIds,
+      paymentMethodIds: params.paymentMethodIds,
+      necessities: params.necessities,
+    },
+    !isBudget
+  )
   const incomeQuery = useIncomeBreakdown({ ...range, groupBy: IncomeGrouping.Source }, isFlow)
 
   const categories = useExpenseCategories().data
@@ -102,13 +109,15 @@ const Insights = ({ queryClient }: InsightsProps) => {
             }
           />
         )}
-        <Select
-          aria-label="Group by"
-          value={params.groupBy}
-          onChange={(groupBy) => update({ groupBy })}
-          style={{ minWidth: 170 }}
-          options={Object.entries(GROUP_LABELS).map(([value, label]) => ({ value, label: `By ${label.toLowerCase()}` }))}
-        />
+        {!isBudget && (
+          <Select
+            aria-label="Group by"
+            value={params.groupBy}
+            onChange={(groupBy) => update({ groupBy })}
+            style={{ minWidth: 170 }}
+            options={Object.entries(GROUP_LABELS).map(([value, label]) => ({ value, label: `By ${label.toLowerCase()}` }))}
+          />
+        )}
         <Button onClick={() => setClassifying(true)}>Classify categories</Button>
       </div>
 
@@ -121,10 +130,13 @@ const Insights = ({ queryClient }: InsightsProps) => {
           { key: 'breakdown', label: 'Breakdown' },
           { key: 'flow', label: 'Flow' },
           { key: 'trends', label: 'Trends' },
+          { key: 'budget', label: 'Budget' },
         ]}
       />
 
-      {expenseQuery.isError || incomeQuery.isError ? (
+      {isBudget ? (
+        <BudgetView params={params} range={range} narrow={narrow} />
+      ) : expenseQuery.isError || incomeQuery.isError ? (
         <Alert type="error" showIcon message="Could not load the data." />
       ) : expenseQuery.isPending || (isFlow && incomeQuery.isPending) ? (
         <Spin size="large" />
@@ -163,6 +175,46 @@ const Insights = ({ queryClient }: InsightsProps) => {
 
       <ClassifyCategories open={classifying} onClose={() => setClassifying(false)} queryClient={queryClient} />
     </div>
+  )
+}
+
+const BudgetView = ({
+  params,
+  range,
+  narrow,
+}: {
+  params: InsightsParams
+  range: { fromDate: string; toDate: string }
+  narrow: boolean
+}) => {
+  const query = useBudgetComparison({
+    ...range,
+    expenseCategoryIds: params.categoryIds,
+    vendorIds: params.vendorIds,
+    paymentMethodIds: params.paymentMethodIds,
+    necessities: params.necessities,
+  })
+  const rows = query.data ?? []
+  const budget = rows.reduce((sum, r) => sum + r.budget, 0)
+  const actual = rows.reduce((sum, r) => sum + r.actual, 0)
+  if (query.isError) return <Alert type="error" showIcon message="Could not load the data." />
+  if (query.isPending) return <Spin size="large" />
+  if (rows.length === 0) return <Empty description="No budgets or spending in this range with these filters." />
+  return (
+    <>
+      <Typography.Text type="secondary">
+        {formatMoney(actual)} spent of {formatMoney(budget)} budgeted, {range.fromDate} to {range.toDate}
+      </Typography.Text>
+      {(params.vendorIds.length > 0 || params.paymentMethodIds.length > 0) && (
+        <Alert
+          type="info"
+          showIcon
+          style={{ margin: '8px 0' }}
+          message="Budgets are per category, so vendor and payment-method filters narrow only the spending."
+        />
+      )}
+      <EChart option={budgetOption(rows, narrow)} height={budgetHeight(rows.length)} label="Budget versus actual spending by category" />
+    </>
   )
 }
 

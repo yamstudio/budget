@@ -44,23 +44,7 @@ public class InsightsApiController(BudgetDbContext context) : ControllerBase
         {
             return BadRequest("fromDate must not be after toDate.");
         }
-        var expenses = context.Expenses.Where(e => e.Date >= fromDate && e.Date <= toDate);
-        if (expenseCategoryIds is { Length: > 0 })
-        {
-            expenses = expenses.Where(e => expenseCategoryIds.Contains(e.ExpenseCategoryID));
-        }
-        if (vendorIds is { Length: > 0 })
-        {
-            expenses = expenses.Where(e => vendorIds.Contains(e.VendorID));
-        }
-        if (paymentMethodIds is { Length: > 0 })
-        {
-            expenses = expenses.Where(e => paymentMethodIds.Contains(e.PaymentMethodID));
-        }
-        if (necessities is { Length: > 0 })
-        {
-            expenses = expenses.Where(e => necessities.Contains(e.ExpenseCategory!.Necessity));
-        }
+        var expenses = FilterExpenses(fromDate, toDate, expenseCategoryIds, vendorIds, paymentMethodIds, necessities);
 
         var groups = await (
             from e in expenses
@@ -114,6 +98,87 @@ public class InsightsApiController(BudgetDbContext context) : ControllerBase
             ? await context.IncomeCategories.ToDictionaryAsync(c => c.IncomeCategoryID, c => c.DisplayName)
             : await context.IncomeSources.ToDictionaryAsync(s => s.IncomeSourceID, s => s.DisplayName);
         return ToRows(groups.Select(g => (g.Key, g.Year, g.Month, g.Amount)), labels);
+    }
+
+    /// <summary>
+    /// Budget vs. actual per category. A budget applies to its FromDate..ToDate period; every budget whose period overlaps the
+    /// range counts in full (it is not prorated). Category and necessity filters apply to both sides; vendor and payment-method
+    /// filters can only narrow the actual spending.
+    /// </summary>
+    [HttpGet("budget", Name = "Get Budget Comparison")]
+    public async Task<ActionResult<ICollection<BudgetComparisonRow>>> GetBudgetComparison(
+        [BindRequired, FromQuery(Name = "fromDate")] DateOnly fromDate,
+        [BindRequired, FromQuery(Name = "toDate")] DateOnly toDate,
+        [FromQuery(Name = "expenseCategoryIds")] int[]? expenseCategoryIds,
+        [FromQuery(Name = "vendorIds")] int[]? vendorIds,
+        [FromQuery(Name = "paymentMethodIds")] int[]? paymentMethodIds,
+        [FromQuery(Name = "necessities")] ExpenseNecessity[]? necessities
+    )
+    {
+        if (fromDate > toDate)
+        {
+            return BadRequest("fromDate must not be after toDate.");
+        }
+        var budgets = context.Budgets.Where(b => b.FromDate <= toDate && b.ToDate >= fromDate);
+        if (expenseCategoryIds is { Length: > 0 })
+        {
+            budgets = budgets.Where(b => expenseCategoryIds.Contains(b.ExpenseCategoryID));
+        }
+        if (necessities is { Length: > 0 })
+        {
+            budgets = budgets.Where(b => necessities.Contains(b.ExpenseCategory!.Necessity));
+        }
+        var budgeted = await budgets
+            .GroupBy(b => b.ExpenseCategoryID)
+            .Select(g => new { Key = g.Key, Amount = g.Sum(b => b.Amount) })
+            .ToDictionaryAsync(g => g.Key, g => g.Amount);
+        var actual = await FilterExpenses(fromDate, toDate, expenseCategoryIds, vendorIds, paymentMethodIds, necessities)
+            .GroupBy(e => e.ExpenseCategoryID)
+            .Select(g => new { Key = g.Key, Amount = g.Sum(e => e.Amount) })
+            .ToDictionaryAsync(g => g.Key, g => g.Amount);
+
+        var labels = await context.ExpenseCategories.ToDictionaryAsync(c => c.ExpenseCategoryID, c => c.DisplayName);
+        return budgeted.Keys
+            .Union(actual.Keys)
+            .Select(id => new BudgetComparisonRow
+            {
+                Key = id,
+                Label = labels.GetValueOrDefault(id, $"#{id}"),
+                Budget = budgeted.GetValueOrDefault(id),
+                Actual = actual.GetValueOrDefault(id),
+            })
+            .OrderByDescending(r => r.Actual)
+            .ThenBy(r => r.Label)
+            .ToList();
+    }
+
+    private IQueryable<Expense> FilterExpenses(
+        DateOnly fromDate,
+        DateOnly toDate,
+        int[]? expenseCategoryIds,
+        int[]? vendorIds,
+        int[]? paymentMethodIds,
+        ExpenseNecessity[]? necessities
+    )
+    {
+        var expenses = context.Expenses.Where(e => e.Date >= fromDate && e.Date <= toDate);
+        if (expenseCategoryIds is { Length: > 0 })
+        {
+            expenses = expenses.Where(e => expenseCategoryIds.Contains(e.ExpenseCategoryID));
+        }
+        if (vendorIds is { Length: > 0 })
+        {
+            expenses = expenses.Where(e => vendorIds.Contains(e.VendorID));
+        }
+        if (paymentMethodIds is { Length: > 0 })
+        {
+            expenses = expenses.Where(e => paymentMethodIds.Contains(e.PaymentMethodID));
+        }
+        if (necessities is { Length: > 0 })
+        {
+            expenses = expenses.Where(e => necessities.Contains(e.ExpenseCategory!.Necessity));
+        }
+        return expenses;
     }
 
     private static List<BreakdownRow> ToRows(IEnumerable<(int Key, int Year, int Month, decimal Amount)> groups, Dictionary<int, string> labels) =>

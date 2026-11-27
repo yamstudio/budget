@@ -12,6 +12,7 @@ describe('parseInsightsParams', () => {
   it('falls back to defaults for unknown or malformed values', () => {
     const p = parse('view=nope&range=99y&by=Banana&cat=x&cat=-1&cat=2&cat=2&nec=Maybe&nec=Essential')
     expect(p.view).toBe('breakdown')
+    expect(parse('view=budget').view).toBe('budget')
     expect(p.range).toBe('6m')
     expect(p.groupBy).toBe(ExpenseGrouping.Category)
     expect(p.categoryIds).toEqual([2])
