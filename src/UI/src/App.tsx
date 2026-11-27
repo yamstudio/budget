@@ -5,6 +5,7 @@ import { Flex, Layout, Menu } from 'antd'
 import { Navigate, Link, Route, Routes, useLocation, Outlet } from 'react-router'
 import Activity from './activity/Activity'
 import Insights from './insights/Insights'
+import ReferenceData from './reference/ReferenceData'
 
 const { Header, Content } = Layout
 const queryClient = new QueryClient({})
@@ -27,10 +28,14 @@ const AppHeader = () => {
       key: '/insights',
       label: <Link to="/insights">Insights</Link>,
     },
+    {
+      key: '/lists',
+      label: <Link to="/lists">Lists</Link>,
+    },
   ]
   const { pathname } = useLocation()
   const selectedKeys = useMemo(() => {
-    if (pathname === '/activity' || pathname === '/insights') {
+    if (pathname === '/activity' || pathname === '/insights' || pathname === '/lists') {
       return [pathname]
     }
     return []
@@ -54,6 +59,7 @@ const App = () => {
               <Route path="expenses" element={<Navigate to="/activity?type=expense" replace />} />
               <Route path="incomes" element={<Navigate to="/activity?type=income" replace />} />
               <Route path="insights" element={<Insights queryClient={queryClient} />} />
+              <Route path="lists" element={<ReferenceData />} />
               <Route path="dashboards/*" element={<Navigate to="/insights" replace />} />
               <Route path="/" element={<Navigate to="activity" />} />
               <Route path="*" element={<Navigate to="/" />} />
