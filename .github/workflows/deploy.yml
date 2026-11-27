@@ -150,8 +150,10 @@ jobs:
         env:
           # Script generation never connects to a database; this dummy local value only satisfies the local-DB guard.
           ConnectionStrings__BudgetDbConnection: Server=127.0.0.1,1433;Database=unused
+        shell: bash
         run: |
           dotnet tool restore
+          dotnet restore src/WebApi
           dotnet ef migrations script --idempotent --project src/WebApi --output migrate.sql
           {
             echo "### Pending production migration"
@@ -186,9 +188,11 @@ jobs:
           PROD_DB_CONNECTION: ${{ secrets.PROD_DB_CONNECTION_STRING }}
           # The one sanctioned place that bypasses the local-database guard.
           BUDGET_ALLOW_REMOTE_DB: '1'
+        shell: bash
         run: |
           echo "Restore point (UTC): $(date -u +%Y-%m-%dT%H:%M:%SZ). Point-in-time restore covers the last 7 days." | tee -a "$GITHUB_STEP_SUMMARY"
           dotnet tool restore
+          dotnet restore src/WebApi
           dotnet ef database update --project src/WebApi --connection "$PROD_DB_CONNECTION"
 
   deploy:

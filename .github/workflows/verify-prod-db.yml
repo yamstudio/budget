@@ -31,6 +31,17 @@ jobs:
         env:
           PROD_DB_CONNECTION: ${{ secrets.PROD_DB_CONNECTION_STRING }}
           BUDGET_ALLOW_REMOTE_DB: '1'
+        shell: bash
         run: |
           dotnet tool restore
-          dotnet ef migrations list --project src/WebApi --connection "$PROD_DB_CONNECTION" | tee -a "$GITHUB_STEP_SUMMARY"
+          dotnet restore src/WebApi
+          # `migrations list` swallows connection errors (prints a warning, still lists migrations, exits 0),
+          # so capture stdout+stderr and fail on that warning. Capturing first also keeps a crash from being
+          # hidden by a pipe.
+          out="$(dotnet ef migrations list --project src/WebApi --connection "$PROD_DB_CONNECTION" 2>&1)"
+          echo "$out" | tee -a "$GITHUB_STEP_SUMMARY"
+          if grep -qE "An error occurred while accessing the database|Pending status not shown" <<< "$out"; then
+            echo "Could not read the migration history from the database"; exit 1
+          fi
+          # Prove we really read the history, not just that nothing crashed.
+          grep -q "InitialCreate" <<< "$out"

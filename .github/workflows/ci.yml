@@ -42,9 +42,11 @@ jobs:
       - name: API integration tests (real SQL Server, real migrations)
         run: dotnet test --project tests/WebApi.Tests --configuration Release
       - name: Migration command dry run (the same command production uses)
+        shell: bash
         run: |
           check="${ConnectionStrings__BudgetDbConnection/Database=Budget;/Database=BudgetMigrateCheck;}"
           dotnet tool restore
+          dotnet restore src/WebApi
           dotnet ef database update --project src/WebApi --connection "$check"
           out="$(dotnet ef database update --project src/WebApi --connection "$check" 2>&1)"
           echo "$out"
