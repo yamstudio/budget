@@ -46,7 +46,7 @@ public class IncomeCategoryApiController : ControllerBase
         incomeCategoryToUpdate.DisplayName = incomeCategory.DisplayName;
         incomeCategoryToUpdate.Description = incomeCategory.Description;
         await _context.SaveChangesAsync();
-        return incomeCategory;
+        return incomeCategoryToUpdate;
     }
 
     [HttpDelete("{incomeCategoryId}", Name = "Delete Income Category")]

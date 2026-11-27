@@ -46,7 +46,7 @@ public class PaymentMethodApiController : ControllerBase
         paymentMethodToUpdate.DisplayName = paymentMethod.DisplayName;
         paymentMethodToUpdate.Description = paymentMethod.Description;
         await _context.SaveChangesAsync();
-        return paymentMethod;
+        return paymentMethodToUpdate;
     }
 
     [HttpDelete("{paymentMethodId}", Name = "Delete Payment Method")]

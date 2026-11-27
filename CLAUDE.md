@@ -49,7 +49,7 @@ The owner was an Angular dev when writing the UI; much of it was copy-pasted bet
 - Run API tests: `scripts/test-api.zsh` (starts the local DB if needed). Add tests for any API change; follow `tests/WebApi.Tests/ExpenseApiTests.cs` (each test owns its data: unique lookup rows and its own date range).
 - The tests read the server from `ConnectionStrings__BudgetDbConnection` and replace only the database name; `LocalDatabaseGuard` still blocks non-local servers. In CI a throwaway SQL Server container is started with a runtime-generated password.
 - `dotnet publish` must target `src/WebApi` (the solution now has a test project).
-- **Open bug** (verified locally): every `PUT` endpoint returns the request body, not the stored row, so `expenseID`/`incomeID` come back as 0. Effects in the UI: `useUpdateExpense`/`useUpdateIncome` patch the cache by that id so they match nothing (stale cache after edits), and a saved-then-updated grid row gets row id `0`. Fix the controllers to return the stored entity, with tests.
+- PUT endpoints return the stored row with its real id (fixed; `UpdateResponseTests` covers all eight). The UI relies on this to patch its query caches by id.
 
 ## Conventions
 - Use zsh for any shell scripts.
@@ -70,5 +70,5 @@ Branch off `master`, open a PR, squash-merge (confirmed; commit titles end with 
 - Controllers are repetitive per-entity CRUD (not audited in depth; validation and error handling not yet reviewed).
 - Deploy workflow runs ARM deployment on every push to `master` (after checks pass).
 - The generated API client depends on a gitignored swagger file, so regenerating is a manual step easily forgotten after API changes.
-- `npm audit` reports 20 vulnerabilities (10 moderate, 10 high; includes vite dev-server advisories and zod) in the UI dependency tree as of 2026-11-26. Not yet fixed or gated in CI; try `npm audit fix` in its own PR.
+- Dependency advisories: `npm audit` was cleaned to 0 on 2026-11-26 (`npm audit fix`, lockfile only). PR CI fails on high-severity advisories in production npm dependencies (`npm audit --omit=dev --audit-level=high`) and on any NuGet advisory (via `-warnaserror`). `dependency-audit.yml` runs weekly (Mondays) over everything including dev tooling. A new advisory can therefore block a deploy until dependencies are bumped; fix with `npm audit fix` or a package bump rather than loosening the gate.
 - Stale SQL server firewall rules (two old client-IP rules) exist beside the broad "Allow Azure services" rule; consider removing them.

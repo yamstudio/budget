@@ -46,7 +46,7 @@ public class ExpenseCategoryApiController : ControllerBase
         expenseCategoryToUpdate.DisplayName = expenseCategory.DisplayName;
         expenseCategoryToUpdate.Description = expenseCategory.Description;
         await _context.SaveChangesAsync();
-        return expenseCategory;
+        return expenseCategoryToUpdate;
     }
 
     [HttpDelete("{expenseCategoryId}", Name = "Delete Expense Category")]
