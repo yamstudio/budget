@@ -15,7 +15,8 @@ The engineering foundation is done and proven end to end (local DB + prod guard,
 - `src/WebApi/`: ASP.NET Core (net10.0) Web API, EF Core + SQL Server, Swashbuckle for Swagger. One controller per entity in `Controllers/`, models in `Models/`, `Data/BudgetDbContext.cs`, EF migrations in `Migrations/`. In production it also serves the built UI from a `static/` folder next to the app.
 - `src/UI/`: React 19 + TypeScript + Vite, Ant Design, AG Grid, Chart.js, TanStack Query, React Router. Data access lives in `src/Queries.ts`.
 - `src/UI/src/gensrc/Api.ts`: **generated** TypeScript client (swagger-typescript-api) from the API's Swagger JSON. Don't hand-edit; regenerate after API changes.
-- `.azure/`: ARM template/parameters for the hosting resources. `.github/workflows/deploy.yml`: CI/CD.
+- `.azure/`: ARM template/parameters for the hosting resources (what the release workflow still deploys). `.github/workflows/deploy.yml`: CI/CD.
+- `infra/`: Terraform, in two layers: `infra/` (web app, SQL, applied by CI later) and `infra/identity/` (CI identities and Entra, **applied only by the owner from a laptop**). Production resources are already imported into state. Read `docs/identities.md` and `infra/README.md` before touching any of it or any Azure role/secret. Never run `terraform apply` (or `destroy`, `import`, `state`) without the owner's explicit say-so; `plan` is fine. Environment names and IDs live in gitignored `terraform.tfvars`/`backend.hcl`; the repo is public, so never commit or paste them, and never paste plan output (it can contain the Entra client secret).
 - `Budget.sln` at root.
 
 ## Environments
@@ -28,6 +29,7 @@ The engineering foundation is done and proven end to end (local DB + prod guard,
 - Never run the API, tests, `dotnet ef`, or any script against a non-local database. `LocalDatabaseGuard` enforces this at startup (only Azure App Service or `BUDGET_ALLOW_REMOTE_DB=1` bypasses it). Never set that variable yourself.
 - Never apply migrations to production, approve the `production-migrations` environment, create a tag/release, run the deploy workflow, merge to `master`, or touch CI/infra/secrets without the owner's explicit say-so. Production migrations run from CI after owner approval; procedure and rollback: `docs/migrations.md`.
 - Never print or commit connection strings, even the local one. Never commit real financial data.
+- This repo is public and the owner's other projects are not. Never write the names of those projects, their repos, databases, resource groups or other resources into any committed file, workflow, PR title/body or commit message (the existence of a project or database is itself private). Say "other, non-public projects". Same for the SQL server, resource group and state account names.
 - Design and rollout plan: `docs/repo-hardening-design.md`.
 
 ## Commands
