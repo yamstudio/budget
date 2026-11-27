@@ -36,7 +36,7 @@ Rules:
    ALTER ROLE db_ddladmin ADD MEMBER [<ci-service-principal-display-name>];
    ```
 2. Add the repository secret `PROD_DB_CONNECTION_STRING`: server, database, `Authentication=Active Directory Default;Encrypt=True`, and no password.
-3. Create the GitHub environment `production-migrations` with required reviewers (the owner). If you are the only reviewer, allow self-review. Without required reviewers the job runs without approval.
+3. Create the GitHub environment `production-migrations` with required reviewers (the owner), and set Deployment branches and tags to Selected branches and tags with a branch rule for `master` and a tag rule for `v*` (releases run from tags; "Protected branches only" rejects them). If you are the only reviewer, allow self-review. Without required reviewers the job runs without approval.
 4. Let CI reach the database through the Azure SQL firewall. GitHub's runner IPs change on every run and are not covered by "Allow Azure services", so each run opens a temporary firewall rule for its own IP and removes it afterwards (`.github/actions/prod-sql`). The CI service principal needs permission to manage firewall rules on that one server, and nothing broader. Once, as an Azure Owner (replace the placeholders; keep the real values out of the repo):
    ```json
    {

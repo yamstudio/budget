@@ -4,7 +4,7 @@ Merging to `master` does **not** deploy. `master` is kept releasable by CI (PR c
 
 ## Cut a release (owner)
 1. GitHub, **Releases**, **Draft a new release**.
-2. **Choose a tag** and create a new one targeting `master`. Name it `vYYYY.MM.DD` (add `.2`, `.3` for several on the same day).
+2. **Choose a tag** and create a new one targeting `master`. Use semantic versioning with a `v` prefix: `v0.1.0` was the first release. Bump the patch (`v0.1.1`) for fixes and the minor (`v0.2.0`) for features; go to `v1.0.0` when the app is stable. Any `v<digit>...` tag works with the workflow.
 3. Click **Generate release notes**: it lists the PRs merged since the last release. Read them; that is your review of what ships.
 4. **Publish release** (not a pre-release, not a draft: drafts do not deploy).
 5. Watch the run in Actions ("Build and deploy Budget app to Azure"). The run summary also lists the commits since the previous release.
@@ -16,6 +16,10 @@ Merging to `master` does **not** deploy. `master` is kept releasable by CI (PR c
 - The tagged commit must pass all CI checks again before anything is built or applied.
 - Deploys never overlap (`production-deploy` concurrency group). If a second release is queued while one is running, a still-pending older run can be replaced by the newest; check Actions if a release seems to have vanished.
 - The very first release has no previous tag, so it is treated as "migrations changed" and asks for the migration approval once. That is expected and harmless (EF applies only pending migrations).
+
+## Required GitHub settings
+- The `production-migrations` environment must allow **tags**: Deployment branches and tags, Selected branches and tags, with a branch rule for `master` (manual verify runs) and a tag rule for `v*`. With "Protected branches only" the migrate job is rejected before it starts (no steps, no log; the reason is in the job's check-run annotation).
+- The `production` environment may carry the same `v*` tag rule.
 
 ## If a release run fails
 - The workflow file used by a release run is the one **at the tag's commit**, so fixing a broken workflow on `master` does not repair an existing tag. Merge the fix, then cut a **new** tag (for example `v2026.11.26.1`).
