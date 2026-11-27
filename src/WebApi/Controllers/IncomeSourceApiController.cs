@@ -57,6 +57,11 @@ public class IncomeSourceApiController : ControllerBase
         {
             return NotFound();
         }
+        // The database cascades deletes, so removing a row that is still referenced would silently delete those rows too.
+        if (await _context.Incomes.AnyAsync(i => i.IncomeSourceID == incomeSourceId))
+        {
+            return Conflict("Cannot delete an income source that is still used by incomes.");
+        }
         _context.Remove(incomeSourceToDelete);
         await _context.SaveChangesAsync();
         return incomeSourceToDelete;
