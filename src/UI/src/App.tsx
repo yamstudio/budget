@@ -1,15 +1,5 @@
-import React, { useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 import { QueryClient, QueryClientContext } from '@tanstack/react-query'
-import {
-  ModuleRegistry,
-  ClientSideRowModelModule,
-  NumberEditorModule,
-  TextEditorModule,
-  ValidationModule,
-  DateEditorModule,
-  PinnedRowModule,
-  CustomEditorModule,
-} from 'ag-grid-community'
 import type { MenuProps } from 'antd'
 import { Flex, Layout, Menu } from 'antd'
 import { Navigate, Link, Route, Routes, useLocation, Outlet } from 'react-router'
@@ -21,9 +11,9 @@ const queryClient = new QueryClient({})
 
 const AppContext = () => {
   return (
-    <QueryClientContext.Provider value={queryClient}>
+    <QueryClientContext value={queryClient}>
       <Outlet />
-    </QueryClientContext.Provider>
+    </QueryClientContext>
   )
 }
 
@@ -53,18 +43,6 @@ const AppHeader = () => {
 }
 
 const App = () => {
-  useEffect(() => {
-    ModuleRegistry.registerModules([
-      ClientSideRowModelModule,
-      CustomEditorModule,
-      DateEditorModule,
-      NumberEditorModule,
-      PinnedRowModule,
-      TextEditorModule,
-      ValidationModule,
-    ])
-  }, [])
-
   return (
     <Flex>
       <Layout style={{ height: '100vh', display: 'flex', width: '100%', minWidth: 0 }}>

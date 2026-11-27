@@ -8,7 +8,6 @@
   "private": true,
   "dependencies": {
     "@tanstack/react-query": "^5.90.20",
-    "ag-grid-react": "^35.0.1",
     "antd": "^6.2.3",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.23",
@@ -41,7 +40,7 @@
     "start": "vite",
     "build": "tsc && vite build",
     "test": "vitest run",
-    "lint": "eslint src --max-warnings 2",
+    "lint": "eslint src --max-warnings 0",
     "prettier": "prettier -w .",
     "serve": "vite preview",
     "genclient": "swagger-typescript-api generate -p swagger/swagger.json -o src/gensrc"
