@@ -116,17 +116,9 @@ resource "azurerm_windows_web_app" "belfastweb" {
   }
 
   sticky_settings {
-    app_setting_names = ["MICROSOFT_PROVIDER_AUTHENTICATION_SECRET", "OVERRIDE_USE_MI_FIC_ASSERTION_CLIENTID"]
+    app_setting_names = ["OVERRIDE_USE_MI_FIC_ASSERTION_CLIENTID"]
   }
 
-  lifecycle {
-    # TEMPORARY, and now UNUSED: sign-in authenticates with the managed identity above, not this old client-secret
-    # app setting. It is kept (ignored, so Terraform neither shows nor changes it) only until the owner has
-    # verified sign-in works, so the cutover can be rolled back. Then delete this block, the entry in
-    # sticky_settings, and the secret on the app registration (docs/identities.md, "Removing the old secret").
-    # NB: ignore_changes does NOT keep the value out of state or plan output.
-    ignore_changes = [app_settings["MICROSOFT_PROVIDER_AUTHENTICATION_SECRET"]]
-  }
 }
 
 # --- SQL: this app's own server and database -------------------------------------------------------

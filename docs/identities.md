@@ -97,8 +97,7 @@ Consequences worth remembering:
 4. **GitHub variables** (not secrets): per environment set `AZURE_CLIENT_ID` (from `terraform output client_ids`),
    plus `AZURE_TENANT_ID` and `AZURE_SUBSCRIPTION_ID`. The plan identity's client id is a repository variable, since
    pull-request jobs have no environment.
-5. **Clean up** only after the new pipeline is proven: delete the old repo secrets and the old Entra client secret
-   on the sign-in app.
+5. **Clean up** only after the new pipeline is proven: delete the old repo secrets.
 
 ## How the web app signs users in (no secret)
 
@@ -115,13 +114,17 @@ with a client secret stored as an app setting. It now uses a **user-assigned man
 
 Apply order matters: the identity layer first (it creates the identity), then `infra/` (it looks it up).
 
-## Removing the old secret
+## The old client secret is gone
 
-After sign-in is verified on the managed identity (use a private window and `/.auth/logout` first, an old session
-cookie lasts 8 hours and would hide a broken credential): delete the `ignore_changes` block, the
-`MICROSOFT_PROVIDER_AUTHENTICATION_SECRET` entry in `sticky_settings` in `infra/main.tf` and apply (Terraform then removes
-the setting), then delete the old client secret from the app registration (Entra portal, or `az ad app credential
-delete`). Rollback before that point: point `client_secret_setting_name` back at the old setting and apply.
+The web app used to hold a client secret as an app setting (`MICROSOFT_PROVIDER_AUTHENTICATION_SECRET`). On 2026-11-27
+sign-in moved to the managed identity above, the owner verified a fresh login (private window, after
+`/.auth/logout`; an old session cookie lasts 8 hours and would hide a broken credential), and the setting, the
+`ignore_changes` workaround and the secret on the app registration were removed. Nothing in Azure or GitHub holds a
+sign-in secret any more. Old versions of the Terraform state blob (versioning is on) may still contain the old value;
+that is harmless because the secret itself was deleted from the app registration.
+
+If sign-in ever breaks after a change here, check that `OVERRIDE_USE_MI_FIC_ASSERTION_CLIENTID` still holds the
+`belfast-web-signin` identity's client id and that the app registration still has its federated credential.
 
 ## Do not
 
@@ -146,14 +149,8 @@ from `infra/` to `infra/identity/`. `infra/identity/imports.tf` adopts them; `in
 
 ## Known gotchas and open follow-ups
 
-- **Do not enable PR-time `terraform plan` in CI until the OLD Entra client secret is gone from the web app's settings
-  (see "Removing the old secret").**
-  The secret is an app setting; a plan that shows any `app_settings` difference prints it, and Actions logs on a public
-  repo are public. The fix is a federated credential for the sign-in app (no secret), then delete the setting and the
-  `ignore_changes` block in `infra/main.tf`. That is the step *before* turning on plan in CI.
 - `belfast-plan` may need more than Reader to read the web app's configuration. Verify when wiring CI.
-- Whether a federated credential works for the web app's sign-in on the Free App Service tier is unverified; fall back
-  to a Key Vault reference if it does not.
+- Sign-in with a managed identity (no secret) is verified to work on the Free App Service tier.
 - The SQL DDL permission for `belfast-migrate` is only proven by the first real migration.
 - SCM basic auth on the web app is still on (it goes away when deploys use `belfast-deploy`).
-- `belfast-infra` can read the web app's settings, including the Entra client secret, until PR 3 removes that secret.
+- `belfast-infra` can read the web app's settings. They hold no secrets now (the connection string is passwordless and sign-in uses a managed identity), so keep it that way: never put a secret in an app setting.
