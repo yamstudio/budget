@@ -10,6 +10,34 @@
  * ---------------------------------------------------------------
  */
 
+export enum IncomeGrouping {
+  Category = 'Category',
+  Source = 'Source',
+}
+
+export enum ExpenseNecessity {
+  Unclassified = 'Unclassified',
+  Essential = 'Essential',
+  Discretionary = 'Discretionary',
+}
+
+export enum ExpenseGrouping {
+  Category = 'Category',
+  Vendor = 'Vendor',
+  PaymentMethod = 'PaymentMethod',
+  Necessity = 'Necessity',
+}
+
+export interface BreakdownRow {
+  /** @format int32 */
+  key: number
+  label: string | null
+  /** @format date */
+  month?: string | null
+  /** @format double */
+  amount: number
+}
+
 export interface Budget {
   /** @format int32 */
   budgetID?: number
@@ -60,6 +88,7 @@ export interface ExpenseCategory {
    * @maxLength 256
    */
   description: string | null
+  necessity?: ExpenseNecessity
 }
 
 export interface ExpenseSummary {
@@ -208,6 +237,7 @@ type CancelToken = Symbol | string | number
 
 export enum ContentType {
   Json = 'application/json',
+  JsonApi = 'application/vnd.api+json',
   FormData = 'multipart/form-data',
   UrlEncoded = 'application/x-www-form-urlencoded',
   Text = 'text/plain',
@@ -263,16 +293,23 @@ export class HttpClient<SecurityDataType = unknown> {
   private contentFormatters: Record<ContentType, (input: any) => any> = {
     [ContentType.Json]: (input: any) =>
       input !== null && (typeof input === 'object' || typeof input === 'string') ? JSON.stringify(input) : input,
+    [ContentType.JsonApi]: (input: any) =>
+      input !== null && (typeof input === 'object' || typeof input === 'string') ? JSON.stringify(input) : input,
     [ContentType.Text]: (input: any) => (input !== null && typeof input !== 'string' ? JSON.stringify(input) : input),
-    [ContentType.FormData]: (input: any) =>
-      Object.keys(input || {}).reduce((formData, key) => {
+    [ContentType.FormData]: (input: any) => {
+      if (input instanceof FormData) {
+        return input
+      }
+
+      return Object.keys(input || {}).reduce((formData, key) => {
         const property = input[key]
         formData.append(
           key,
           property instanceof Blob ? property : typeof property === 'object' && property !== null ? JSON.stringify(property) : `${property}`
         )
         return formData
-      }, new FormData()),
+      }, new FormData())
+    },
     [ContentType.UrlEncoded]: (input: any) => this.toQueryString(input),
   }
 
@@ -342,13 +379,14 @@ export class HttpClient<SecurityDataType = unknown> {
       signal: (cancelToken ? this.createAbortSignal(cancelToken) : requestParams.signal) || null,
       body: typeof body === 'undefined' || body === null ? null : payloadFormatter(body),
     }).then(async (response) => {
-      const r = response.clone() as HttpResponse<T, E>
+      const r = response as HttpResponse<T, E>
       r.data = null as unknown as T
       r.error = null as unknown as E
 
+      const responseToParse = responseFormat ? response.clone() : response
       const data = !responseFormat
         ? r
-        : await response[responseFormat]()
+        : await responseToParse[responseFormat]()
             .then((data) => {
               if (r.ok) {
                 r.data = data
@@ -554,9 +592,9 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         /** @format date */
         toDate: string
         /** @format int32 */
-        groupThreshold?: number
+        groupThreshold: number
         /** @format int32 */
-        maxResults?: number
+        maxResults: number
         aggregateByAmount?: boolean
         aggregateByExpenseCategory?: boolean
         aggregateByPaymentMethod?: boolean
@@ -833,6 +871,62 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<IncomeSource, any>({
         path: `/api/income-sources/${incomeSourceId}`,
         method: 'DELETE',
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags InsightsApi
+     * @name GetExpenseBreakdown
+     * @request GET:/api/insights/expenses
+     */
+    getExpenseBreakdown: (
+      query: {
+        /** @format date */
+        fromDate: string
+        /** @format date */
+        toDate: string
+        groupBy: ExpenseGrouping
+        byMonth?: boolean
+        expenseCategoryIds?: number[]
+        vendorIds?: number[]
+        paymentMethodIds?: number[]
+        necessities?: ExpenseNecessity[]
+      },
+      params: RequestParams = {}
+    ) =>
+      this.request<BreakdownRow[], any>({
+        path: `/api/insights/expenses`,
+        method: 'GET',
+        query: query,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags InsightsApi
+     * @name GetIncomeBreakdown
+     * @request GET:/api/insights/incomes
+     */
+    getIncomeBreakdown: (
+      query: {
+        /** @format date */
+        fromDate: string
+        /** @format date */
+        toDate: string
+        groupBy: IncomeGrouping
+        byMonth?: boolean
+      },
+      params: RequestParams = {}
+    ) =>
+      this.request<BreakdownRow[], any>({
+        path: `/api/insights/incomes`,
+        method: 'GET',
+        query: query,
         format: 'json',
         ...params,
       }),

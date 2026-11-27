@@ -16,6 +16,7 @@ import { addDays, addMonths, startOfMonth } from 'date-fns'
 import { Navigate, Link, Route, Routes, useLocation, Outlet } from 'react-router'
 import Expenses from './Expenses'
 import Incomes from './Incomes'
+import Insights from './insights/Insights'
 import MonthlyComparisonDashboard from './MonthlyComparisonDashboard'
 import { today } from './Queries'
 import YearToDateProgressDashboard from './YearToDateProgressDashboard'
@@ -44,6 +45,10 @@ const AppHeader = () => {
       label: <Link to="/incomes">Incomes</Link>,
     },
     {
+      key: '/insights',
+      label: <Link to="/insights">Insights</Link>,
+    },
+    {
       key: '/dashboards',
       label: 'Dashboards',
       children: [
@@ -60,7 +65,7 @@ const AppHeader = () => {
   ]
   const { pathname } = useLocation()
   const selectedKeys = useMemo(() => {
-    if (pathname === '/expenses' || pathname === '/incomes') {
+    if (pathname === '/expenses' || pathname === '/incomes' || pathname === '/insights') {
       return [pathname]
     }
     if (pathname.startsWith('/dashboards')) {
@@ -90,13 +95,14 @@ const App = () => {
 
   return (
     <Flex>
-      <Layout style={{ height: '100vh', display: 'flex' }}>
+      <Layout style={{ height: '100vh', display: 'flex', width: '100%', minWidth: 0 }}>
         <AppHeader />
-        <Content style={{ flex: 1, display: 'flex' }}>
+        <Content style={{ flex: 1, display: 'flex', minWidth: 0 }}>
           <Routes>
             <Route path="/" element={<AppContext />}>
               <Route path="expenses" element={<Expenses fromDate={fromDate} toDate={toDate} />} />
               <Route path="incomes" element={<Incomes fromDate={fromDate} toDate={toDate} />} />
+              <Route path="insights" element={<Insights queryClient={queryClient} />} />
               <Route path="dashboards">
                 <Route path="monthly-comparison" element={<MonthlyComparisonDashboard fromDate={fromDate} toDate={toDate} />} />
                 <Route path="year-to-date-progress" element={<YearToDateProgressDashboard toDate={toDate} />} />

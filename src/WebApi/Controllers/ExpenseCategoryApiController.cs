@@ -24,7 +24,7 @@ public class ExpenseCategoryApiController : ControllerBase
 
     [HttpPost(Name = "Create Expense Category")]
     public async Task<ExpenseCategory> CreateExpenseCategory(
-        [Bind([nameof(ExpenseCategory.DisplayName), nameof(ExpenseCategory.Description)])] ExpenseCategory expenseCategory
+        [Bind([nameof(ExpenseCategory.DisplayName), nameof(ExpenseCategory.Description), nameof(ExpenseCategory.Necessity)])] ExpenseCategory expenseCategory
     )
     {
         _context.Add(expenseCategory);
@@ -35,7 +35,7 @@ public class ExpenseCategoryApiController : ControllerBase
     [HttpPut("{expenseCategoryId}", Name = "Update Expense Category")]
     public async Task<ActionResult<ExpenseCategory>> UpdateExpenseCategory(
         int expenseCategoryId,
-        [Bind([nameof(ExpenseCategory.DisplayName), nameof(ExpenseCategory.Description)])] ExpenseCategory expenseCategory
+        [Bind([nameof(ExpenseCategory.DisplayName), nameof(ExpenseCategory.Description), nameof(ExpenseCategory.Necessity)])] ExpenseCategory expenseCategory
     )
     {
         var expenseCategoryToUpdate = await _context.ExpenseCategories.FirstOrDefaultAsync(e => e.ExpenseCategoryID == expenseCategoryId);
@@ -45,6 +45,7 @@ public class ExpenseCategoryApiController : ControllerBase
         }
         expenseCategoryToUpdate.DisplayName = expenseCategory.DisplayName;
         expenseCategoryToUpdate.Description = expenseCategory.Description;
+        expenseCategoryToUpdate.Necessity = expenseCategory.Necessity;
         await _context.SaveChangesAsync();
         return expenseCategoryToUpdate;
     }

@@ -11,5 +11,5 @@ public class ExpenseCategory
     public required string DisplayName { get; set; }
     [StringLength(256)]
     public required string Description { get; set; }
-
+    public ExpenseNecessity Necessity { get; set; }
 }

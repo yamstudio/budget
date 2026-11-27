@@ -1,6 +1,6 @@
 import { QueryClient, useMutation, useQuery } from '@tanstack/react-query'
 import { addMonths, format, startOfMonth } from 'date-fns'
-import { Api, Expense, Income, Vendor } from './gensrc/Api'
+import { Api, Expense, ExpenseCategory, Income, Vendor } from './gensrc/Api'
 
 const api = new Api<never>().api
 
@@ -101,10 +101,12 @@ export const useCreateIncome = (queryClient: QueryClient) =>
   useMutation({
     mutationKey: ['createIncome'],
     mutationFn: (createIncomeRequest: Omit<Income, 'IncomeID'>) => api.createIncome(createIncomeRequest).then(({ data }) => data),
-    onSuccess: (data) =>
+    onSuccess: (data) => {
       queryIncomes(queryClient, data.date!).forEach(({ queryKey, incomes }) => {
         queryClient.setQueryData(queryKey, [...incomes, data])
-      }),
+      })
+      invalidateBreakdowns(queryClient, 'incomeBreakdown')
+    },
   })
 export const useUpdateIncome = (queryClient: QueryClient) =>
   useMutation({
@@ -119,6 +121,7 @@ export const useUpdateIncome = (queryClient: QueryClient) =>
           incomes.map((income) => (income.incomeID === incomeID ? data : income))
         )
       })
+      invalidateBreakdowns(queryClient, 'incomeBreakdown')
     },
   })
 export const useDeleteIncome = (queryClient: QueryClient) =>
@@ -133,6 +136,7 @@ export const useDeleteIncome = (queryClient: QueryClient) =>
           incomes.filter((income) => income.incomeID !== incomeID)
         )
       })
+      invalidateBreakdowns(queryClient, 'incomeBreakdown')
     },
   })
 
@@ -158,8 +162,12 @@ export const useExpenseSummary = (fromDate: Date, toDate: Date) =>
         })
         .then(({ data }) => data),
   })
-const invalidateExpenseSummary = (queryClient: QueryClient, date: string) =>
-  queryClient.invalidateQueries({
+const invalidateBreakdowns = (queryClient: QueryClient, kind: 'expenseBreakdown' | 'incomeBreakdown') =>
+  queryClient.invalidateQueries({ queryKey: [kind] })
+
+const invalidateExpenseSummary = (queryClient: QueryClient, date: string) => {
+  invalidateBreakdowns(queryClient, 'expenseBreakdown')
+  return queryClient.invalidateQueries({
     exact: false,
     queryKey: ['expenseSummary'],
     predicate: ({ queryKey, state }) =>
@@ -168,6 +176,7 @@ const invalidateExpenseSummary = (queryClient: QueryClient, date: string) =>
       (queryKey[2] as string).localeCompare(date) >= 0 &&
       !!state.data,
   })
+}
 
 export const useExpenseTemplates = () =>
   useQuery({
@@ -228,3 +237,32 @@ export const useCreateVendor = (queryClient: QueryClient) =>
   })
 
 export const today = new Date()
+
+export const useUpdateExpenseCategory = (queryClient: QueryClient) =>
+  useMutation({
+    mutationKey: ['updateExpenseCategory'],
+    mutationFn: (category: ExpenseCategory) => api.updateExpenseCategory(category.expenseCategoryID!, category).then(({ data }) => data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenseCategories'] })
+      invalidateBreakdowns(queryClient, 'expenseBreakdown')
+    },
+  })
+
+export type ExpenseBreakdownQuery = Parameters<typeof api.getExpenseBreakdown>[0]
+export type IncomeBreakdownQuery = Parameters<typeof api.getIncomeBreakdown>[0]
+
+export const useExpenseBreakdown = (query: ExpenseBreakdownQuery, enabled = true) =>
+  useQuery({
+    enabled,
+    queryKey: ['expenseBreakdown', query],
+    staleTime: 300_000,
+    queryFn: () => api.getExpenseBreakdown(query).then(({ data }) => data),
+  })
+
+export const useIncomeBreakdown = (query: IncomeBreakdownQuery, enabled = true) =>
+  useQuery({
+    enabled,
+    queryKey: ['incomeBreakdown', query],
+    staleTime: 300_000,
+    queryFn: () => api.getIncomeBreakdown(query).then(({ data }) => data),
+  })
