@@ -12,7 +12,12 @@ public static class DevSeeder
         if (db.ExpenseCategories.Any()) return;
 
         var categories = new[] { "Groceries", "Rent", "Dining", "Transport", "Utilities" }
-            .Select(n => new ExpenseCategory { DisplayName = n, Description = $"Fake {n}" }).ToList();
+            .Select(n => new ExpenseCategory
+            {
+                DisplayName = n,
+                Description = $"Fake {n}",
+                Necessity = n == "Dining" ? ExpenseNecessity.Discretionary : ExpenseNecessity.Essential,
+            }).ToList();
         var vendors = new[] { "Corner Market", "Landlord LLC", "Noodle House", "Metro", "Power Co" }
             .Select(n => new Vendor { DisplayName = n, Description = $"Fake {n}" }).ToList();
         var methods = new[] { "Credit Card", "Debit Card", "Cash" }
