@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Alert, Badge, Button, Empty, Grid, Modal, Select, Spin, Table, Tabs, Typography } from 'antd'
+import { Alert, Button, Empty, Grid, Modal, Select, Spin, Table, Tabs, Typography } from 'antd'
 import { useSearchParams } from 'react-router'
 import DateRangeControl from '../DateRangeControl'
 import { formatDate, resolveRange } from '../dateRange'
@@ -13,6 +13,7 @@ import {
   useUpdateExpenseCategory,
   useVendors,
 } from '../Queries'
+import FilterPanel, { filterField, lookupOptions } from '../FilterPanel'
 import EChart from './EChart'
 import {
   breakdownHeight,
@@ -38,9 +39,6 @@ const GROUP_LABELS: Record<ExpenseGrouping, string> = {
   [ExpenseGrouping.Necessity]: 'Essential vs. discretionary',
 }
 const NECESSITY_OPTIONS = Object.values(ExpenseNecessity).map((value) => ({ value, label: value }))
-const lookupOptions = <T extends { displayName: string | null }>(items: T[] | undefined, id: (item: T) => number | undefined) =>
-  (items ?? []).map((item) => ({ value: id(item)!, label: item.displayName ?? '' })).sort((a, b) => a.label.localeCompare(b.label))
-
 interface InsightsProps {
   queryClient: QueryClient
 }
@@ -234,58 +232,38 @@ const Filters = ({
   vendors?: Vendor[]
   paymentMethods?: PaymentMethod[]
   narrow: boolean
-}) => {
-  const [open, setOpen] = useState(false)
-  const count = activeFilterCount(params)
-  const field = <V extends number | string>(
-    placeholder: string,
-    options: { value: V; label: string }[],
-    value: V[],
-    onChange: (v: V[]) => void
-  ) => (
-    <Select<V[]>
-      mode="multiple"
-      allowClear
-      showSearch={{ optionFilterProp: 'label' }}
-      maxTagCount="responsive"
-      placeholder={placeholder}
-      value={value}
-      options={options}
-      onChange={onChange}
-      style={{ minWidth: narrow ? '100%' : 200, flex: narrow ? undefined : 1 }}
-    />
-  )
-  return (
-    <div style={{ marginBottom: 8 }}>
-      <Badge count={count} size="small">
-        <Button onClick={() => setOpen(!open)}>{open ? 'Hide filters' : 'Filters'}</Button>
-      </Badge>
-      {open && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
-          {field(
-            'Categories',
-            lookupOptions(categories, (c) => c.expenseCategoryID),
-            params.categoryIds,
-            (categoryIds) => update({ categoryIds })
-          )}
-          {field(
-            'Vendors',
-            lookupOptions(vendors, (v) => v.vendorID),
-            params.vendorIds,
-            (vendorIds) => update({ vendorIds })
-          )}
-          {field(
-            'Payment methods',
-            lookupOptions(paymentMethods, (p) => p.paymentMethodID),
-            params.paymentMethodIds,
-            (paymentMethodIds) => update({ paymentMethodIds })
-          )}
-          {field('Essential / discretionary', NECESSITY_OPTIONS, params.necessities, (necessities) => update({ necessities }))}
-        </div>
-      )}
-    </div>
-  )
-}
+}) => (
+  <FilterPanel
+    narrow={narrow}
+    count={activeFilterCount(params)}
+    fields={[
+      filterField({
+        placeholder: 'Categories',
+        options: lookupOptions(categories, (c) => c.expenseCategoryID),
+        value: params.categoryIds,
+        onChange: (categoryIds) => update({ categoryIds }),
+      }),
+      filterField({
+        placeholder: 'Vendors',
+        options: lookupOptions(vendors, (v) => v.vendorID),
+        value: params.vendorIds,
+        onChange: (vendorIds) => update({ vendorIds }),
+      }),
+      filterField({
+        placeholder: 'Payment methods',
+        options: lookupOptions(paymentMethods, (p) => p.paymentMethodID),
+        value: params.paymentMethodIds,
+        onChange: (paymentMethodIds) => update({ paymentMethodIds }),
+      }),
+      filterField({
+        placeholder: 'Essential / discretionary',
+        options: NECESSITY_OPTIONS,
+        value: params.necessities,
+        onChange: (necessities) => update({ necessities }),
+      }),
+    ]}
+  />
+)
 
 const ClassifyCategories = ({ open, onClose, queryClient }: { open: boolean; onClose: () => void; queryClient: QueryClient }) => {
   const categories = useExpenseCategories().data
