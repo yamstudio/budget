@@ -1,6 +1,6 @@
 # Database migrations runbook
 
-Read `docs/repo-hardening-design.md` for context. Never put connection strings, hostnames or credentials in this repo.
+Never put connection strings, hostnames or credentials in this repo.
 
 ## Local development (safe, automated)
 - `scripts/dev-db.zsh up` starts a throwaway SQL Server container (Podman). `scripts/dev-api.zsh` starts it if needed and runs the API against it.
@@ -15,8 +15,8 @@ Read `docs/repo-hardening-design.md` for context. Never put connection strings, 
 
 ## Applying to production (automated, with approval)
 Migrations are applied by `.github/workflows/deploy.yml` when a release (see `docs/releasing.md`) changes `src/WebApi/Migrations` compared with the previous release tag:
-1. `plan-migrations` detects the change, generates the idempotent SQL (`dotnet ef migrations script --idempotent`) and prints it in the run summary for review.
-2. `migrate` waits for a required reviewer to approve the **production-migrations** GitHub environment, logs into Azure as the CI service principal, notes the restore point time, and runs `dotnet ef database update` against production with `BUDGET_ALLOW_REMOTE_DB=1` (the only sanctioned use of that override).
+1. `changes` detects the change, generates the idempotent SQL (`dotnet ef migrations script --idempotent`) and prints it in the run summary for review.
+2. `migrate` waits for a required reviewer to approve the **production-migrations** GitHub environment, logs into Azure as the `belfast-migrate` identity (GitHub OIDC, no stored credential), notes the restore point time, and runs `dotnet ef database update` against production with `BUDGET_ALLOW_REMOTE_DB=1` (the only sanctioned use of that override).
 3. `deploy` runs only after `migrate` succeeded or was not needed. After deploying it smoke-checks that the app answers (a redirect to sign-in counts as up).
 Releases that do not touch migrations skip the approval gate entirely.
 
@@ -27,32 +27,13 @@ Rules:
 - Rollback: the database has 7-day point-in-time restore and no long-term backup. Each migration run records its restore point (UTC) in the run summary. To roll back, restore the database to that time (Azure portal or `az sql db restore`), then redeploy the previous commit. Migrations are not reversed automatically.
 - Claude must never approve the environment, run the production steps by hand, or set `BUDGET_ALLOW_REMOTE_DB`.
 
-### One-time setup (owner; none of it is in the repo)
-1. Give the CI service principal (the identity behind the `AZURE_CREDENTIALS` secret) access to the production database. Azure SQL here is Azure AD-only, so ARM roles are not enough; connect to the production database as the SQL Azure AD admin (for example the portal query editor) and run:
-   ```sql
-   CREATE USER [<ci-service-principal-display-name>] FROM EXTERNAL PROVIDER;
-   ALTER ROLE db_datareader ADD MEMBER [<ci-service-principal-display-name>];
-   ALTER ROLE db_datawriter ADD MEMBER [<ci-service-principal-display-name>];
-   ALTER ROLE db_ddladmin ADD MEMBER [<ci-service-principal-display-name>];
-   ```
-2. Add the repository secret `PROD_DB_CONNECTION_STRING`: server, database, `Authentication=Active Directory Default;Encrypt=True`, and no password.
-3. Create the GitHub environment `production-migrations` with required reviewers (the owner), and set Deployment branches and tags to Selected branches and tags with a branch rule for `master` and a tag rule for `v*` (releases run from tags; "Protected branches only" rejects them). If you are the only reviewer, allow self-review. Without required reviewers the job runs without approval.
-4. Let CI reach the database through the Azure SQL firewall. GitHub's runner IPs change on every run and are not covered by "Allow Azure services", so each run opens a temporary firewall rule for its own IP and removes it afterwards (`.github/actions/prod-sql`). The CI service principal needs permission to manage firewall rules on that one server, and nothing broader. Once, as an Azure Owner (replace the placeholders; keep the real values out of the repo):
-   ```json
-   {
-     "Name": "SQL Firewall Rule Manager (CI)",
-     "Description": "Create and delete firewall rules on one SQL server",
-     "Actions": [
-       "Microsoft.Sql/servers/read",
-       "Microsoft.Sql/servers/firewallRules/read",
-       "Microsoft.Sql/servers/firewallRules/write",
-       "Microsoft.Sql/servers/firewallRules/delete"
-     ],
-     "AssignableScopes": ["<resource id of the SQL server>"]
-   }
-   ```
-   `az role definition create --role-definition role.json`, then `az role assignment create --assignee-object-id <service principal object id> --assignee-principal-type ServicePrincipal --role "SQL Firewall Rule Manager (CI)" --scope "<resource id of the SQL server>"`. Also add the environment secret `PROD_SQL_RESOURCE_GROUP` (the resource group that contains the SQL server) to `production-migrations`.
-5. Verify without changing anything: Actions, **Verify production DB access**, Run workflow, approve it. It lists applied and pending migrations read-only, which proves the approval gate, the environment secret, the Azure login and database read access. It cannot prove the DDL permission; that is only proven by the first real migration, so keep that one small and additive.
+### Setup it relies on
+All of it is described in `docs/identities.md` and nothing here is a stored secret:
+- The `belfast-migrate` identity and its narrow firewall role come from Terraform (`infra/identity/`). Its database user and roles (`db_ddladmin`, `db_datareader`, `db_datawriter`) are the one manual SQL step there.
+- The workflow derives the passwordless connection string and resource group from the `TF_VARS` secret (`.github/actions/tf-config`), masked in logs.
+- Each run opens a temporary Azure SQL firewall rule for the runner's own IP and removes it afterwards (`.github/actions/prod-sql`): runner IPs change on every run and are not covered by "Allow Azure services".
+- The `production-migrations` environment has the owner as required reviewer and allows tags: Deployment branches and tags, Selected, with a branch rule for `master` (manual verify runs) and a tag rule for `v*`.
+- Verify without changing anything: Actions, **Verify production DB access**, Run workflow, approve it. It lists applied and pending migrations read-only.
 
 ## Future
 Optional: a pre-migration database copy for risky changes (Basic tier supports `az sql db copy`).

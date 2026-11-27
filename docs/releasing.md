@@ -8,18 +8,19 @@ Merging to `master` does **not** deploy. `master` is kept releasable by CI (PR c
 3. Click **Generate release notes**: it lists the PRs merged since the last release. Read them; that is your review of what ships.
 4. **Publish release** (not a pre-release, not a draft: drafts do not deploy).
 5. Watch the run in Actions ("Build and deploy Budget app to Azure"). The run summary also lists the commits since the previous release.
-6. If the release changes `src/WebApi/Migrations`, the run pauses for approval of the **production-migrations** environment: read the SQL in the summary, then approve (see `docs/migrations.md`). Releases without migration changes skip that gate.
-7. The deploy ends with a smoke check (the app answers; a redirect to sign-in counts as up). It does not prove the app works, so open the app after a release.
+6. If the release changes `infra/`, the run first pauses for approval of the **production-infra** environment: it plans Terraform, refuses to delete or replace anything, and applies the rest. Releases without infra changes skip that gate.
+7. If the release changes `src/WebApi/Migrations`, the run pauses for approval of the **production-migrations** environment: read the SQL in the summary, then approve (see `docs/migrations.md`). Releases without migration changes skip that gate.
+8. The deploy ends with a smoke check (the app answers; a redirect to sign-in counts as up). It does not prove the app works, so open the app after a release.
 
 ## What the workflow enforces
 - Only a tag named `v<digit>...` that is part of `master`'s history can deploy. Running the workflow by hand from a branch, or from a tag on an unmerged commit, fails in the `guard` job. So unreviewed branch code cannot ship.
 - The tagged commit must pass all CI checks again before anything is built or applied.
 - Deploys never overlap (`production-deploy` concurrency group). If a second release is queued while one is running, a still-pending older run can be replaced by the newest; check Actions if a release seems to have vanished.
-- The very first release has no previous tag, so it is treated as "migrations changed" and asks for the migration approval once. That is expected and harmless (EF applies only pending migrations).
 
 ## Required GitHub settings
 - The `production-migrations` environment must allow **tags**: Deployment branches and tags, Selected branches and tags, with a branch rule for `master` (manual verify runs) and a tag rule for `v*`. With "Protected branches only" the migrate job is rejected before it starts (no steps, no log; the reason is in the job's check-run annotation).
-- The `production` environment may carry the same `v*` tag rule.
+- The `production-infra` environment has the owner as required reviewer and the same `v*` tag rule.
+- The `production` environment carries the same `v*` tag rule (its deploy identity's federated credential trusts that environment).
 
 ## If a release run fails
 - The workflow file used by a release run is the one **at the tag's commit**, so fixing a broken workflow on `master` does not repair an existing tag. Merge the fix, then cut a **new** tag (for example `v2026.11.26.1`).

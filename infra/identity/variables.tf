@@ -52,11 +52,6 @@ variable "app_owner_object_id" {
   description = "Object id of the one user allowed to sign in to the app (and owner of the identities)."
 }
 
-variable "owner_assignment_id" {
-  type        = string
-  description = "Id of the existing app role assignment for the owner (import only)."
-}
-
 variable "signin_app_object_id" {
   type        = string
   description = "Object id of the Entra app REGISTRATION behind the web app sign-in (not the client id, not the enterprise app)."

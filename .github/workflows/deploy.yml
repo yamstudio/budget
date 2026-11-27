@@ -13,6 +13,9 @@ on:
     types: [published]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: production-deploy
   cancel-in-progress: false
@@ -84,41 +87,23 @@ jobs:
           name: budget
           path: artifact/
           if-no-files-found: error
-  
-  arm-deploy:
-    needs: checks
-    runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Log into Azure
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Run ARM deploy
-        uses: azure/arm-deploy@v2
-        with:
-          subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          resourceGroupName: ${{ secrets.AZURE_RESOURCE_GROUP }}
-          template: .azure/Belfast.Template.json
-          parameters: .azure/Belfast.Parameters.json
-
-  # Decide whether this release changes the database schema (compared with the previous release tag)
-  # and, if so, publish the exact SQL for review. Always lists what is in the release.
-  plan-migrations:
+  # What does this release change, compared with the previous release tag? Drives the two approval-gated jobs below:
+  # `infra` runs only if infra/ changed, `migrate` only if EF migrations changed. Also lists what is in the release
+  # and, for a schema change, publishes the exact SQL for review.
+  changes:
     needs: checks
     runs-on: ubuntu-latest
     outputs:
       has_migrations: ${{ steps.diff.outputs.has_migrations }}
+      has_infra: ${{ steps.diff.outputs.has_infra }}
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: What changed since the previous release? Did migrations change?
+      - name: What changed since the previous release?
         id: diff
         run: |
           prev="$(git describe --tags --abbrev=0 --match 'v[0-9]*' "${GITHUB_SHA}^" 2>/dev/null || true)"
@@ -130,15 +115,12 @@ jobs:
               git log --oneline "$prev..$GITHUB_SHA"
               echo '```'
             else
-              echo "No previous release tag found; treating the schema as changed."
+              echo "No previous release tag found; treating the schema and infrastructure as changed."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
-          if [[ -z "$prev" ]] || ! git diff --quiet "$prev" "$GITHUB_SHA" -- src/WebApi/Migrations; then
-            changed=true
-          else
-            changed=false
-          fi
-          echo "has_migrations=$changed" >> "$GITHUB_OUTPUT"
+          changed() { [[ -z "$prev" ]] || ! git diff --quiet "$prev" "$GITHUB_SHA" -- "$1"; }
+          if changed src/WebApi/Migrations; then echo "has_migrations=true" >> "$GITHUB_OUTPUT"; else echo "has_migrations=false" >> "$GITHUB_OUTPUT"; fi
+          if changed infra; then echo "has_infra=true" >> "$GITHUB_OUTPUT"; else echo "has_infra=false" >> "$GITHUB_OUTPUT"; fi
 
       - uses: actions/setup-dotnet@v5
         if: steps.diff.outputs.has_migrations == 'true'
@@ -163,13 +145,60 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-  # Applies pending EF migrations to production. Runs only when migrations changed, and only after a
+  # Applies Terraform (web app, plan, SQL server) as belfast-infra via GitHub OIDC. Runs only when infra/ changed since
+  # the previous release, and only after a required reviewer approves the production-infra environment. It refuses to
+  # delete or replace anything: such a change must be applied by hand. See docs/identities.md.
+  infra:
+    needs: [checks, changes]
+    if: needs.changes.outputs.has_infra == 'true'
+    runs-on: ubuntu-latest
+    environment: production-infra
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      ARM_USE_OIDC: 'true'
+      ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '~> 1.15'
+          terraform_wrapper: false
+
+      - uses: ./.github/actions/tf-config
+        with:
+          tf-vars: ${{ secrets.TF_VARS }}
+          tf-backend: ${{ secrets.TF_BACKEND }}
+
+      - name: Plan, check, apply
+        working-directory: infra
+        shell: bash
+        run: |
+          terraform init -input=false -no-color -backend-config=backend.hcl
+          set +e
+          terraform plan -input=false -no-color -detailed-exitcode -out="$RUNNER_TEMP/tfplan"
+          rc=$?
+          set -e
+          if [[ $rc -eq 0 ]]; then echo "No infrastructure changes."; exit 0; fi
+          [[ $rc -eq 2 ]] || { echo "terraform plan failed."; exit 1; }
+          deletes="$(terraform show -json "$RUNNER_TEMP/tfplan" | jq '[.resource_changes[]? | select(.change.actions | index("delete"))] | length')"
+          [[ "$deletes" == "0" ]] || { echo "Refusing to delete or replace $deletes resource(s) from CI. Apply that change by hand."; exit 1; }
+          terraform apply -input=false -no-color "$RUNNER_TEMP/tfplan"
+
+  # Applies pending EF migrations to production as belfast-migrate. Runs only when migrations changed, and only after a
   # required reviewer approves the production-migrations environment (configured in GitHub settings).
   migrate:
-    needs: [checks, plan-migrations]
-    if: needs.plan-migrations.outputs.has_migrations == 'true'
+    needs: [checks, changes, infra]
+    if: ${{ !failure() && !cancelled() && needs.changes.outputs.has_migrations == 'true' }}
     runs-on: ubuntu-latest
     environment: production-migrations
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v6
 
@@ -177,29 +206,43 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      # Exports PROD_DB_CONNECTION (passwordless) and PROD_SQL_RESOURCE_GROUP, with every value masked.
+      - uses: ./.github/actions/tf-config
+        with:
+          tf-vars: ${{ secrets.TF_VARS }}
+          tf-backend: ${{ secrets.TF_BACKEND }}
+
       - name: Log into Azure
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
       - name: Open SQL firewall for this runner
         uses: ./.github/actions/prod-sql
         with:
           mode: open
-          connection-string: ${{ secrets.PROD_DB_CONNECTION_STRING }}
-          resource-group: ${{ secrets.PROD_SQL_RESOURCE_GROUP }}
+          connection-string: ${{ env.PROD_DB_CONNECTION }}
+          resource-group: ${{ env.PROD_SQL_RESOURCE_GROUP }}
+
+      # The OIDC token behind the login lives only a few minutes, so log in again right before the database work.
+      - name: Log into Azure (fresh token)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
       - name: Wait until the production database is reachable
         uses: ./.github/actions/prod-sql
         with:
           mode: wait
-          connection-string: ${{ secrets.PROD_DB_CONNECTION_STRING }}
-          resource-group: ${{ secrets.PROD_SQL_RESOURCE_GROUP }}
+          connection-string: ${{ env.PROD_DB_CONNECTION }}
+          resource-group: ${{ env.PROD_SQL_RESOURCE_GROUP }}
 
       - name: Apply migrations
         env:
-          # Connection string WITHOUT a password, using Azure AD auth (Authentication=Active Directory Default).
-          PROD_DB_CONNECTION: ${{ secrets.PROD_DB_CONNECTION_STRING }}
           # The one sanctioned place that bypasses the local-database guard.
           BUDGET_ALLOW_REMOTE_DB: '1'
         shell: bash
@@ -209,23 +252,26 @@ jobs:
           dotnet restore src/WebApi
           dotnet ef database update --project src/WebApi --connection "$PROD_DB_CONNECTION"
 
-
       - name: Close SQL firewall
         if: always()
         uses: ./.github/actions/prod-sql
         with:
           mode: close
-          connection-string: ${{ secrets.PROD_DB_CONNECTION_STRING }}
-          resource-group: ${{ secrets.PROD_SQL_RESOURCE_GROUP }}
+          connection-string: ${{ env.PROD_DB_CONNECTION }}
+          resource-group: ${{ env.PROD_SQL_RESOURCE_GROUP }}
 
+  # Publishes the app as belfast-deploy via GitHub OIDC (no publish profile, no stored credential).
   deploy:
     runs-on: ubuntu-latest
-    # Run when migrations were applied or not needed; never when anything upstream failed.
-    needs: [build, arm-deploy, migrate]
+    # Run when infra and migrations were applied or not needed; never when anything upstream failed.
+    needs: [build, infra, migrate]
     if: ${{ !failure() && !cancelled() }}
     environment:
       name: 'production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
       - name: Download artifact from build job
@@ -233,12 +279,18 @@ jobs:
         with:
           name: budget
 
+      - name: Log into Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
 
       - name: Smoke check (app is up; sign-in redirect counts as up)

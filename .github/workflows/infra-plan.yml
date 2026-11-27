@@ -1,0 +1,56 @@
+name: Infra plan
+
+# Read-only `terraform plan` for pull requests that touch infra/. Runs as the belfast-plan identity (Reader plus read
+# access to the state; GitHub OIDC, no secret), takes no state lock and applies nothing. The plan goes to the log, where
+# every production name and id is masked; see docs/identities.md. Fork PRs get no secrets or OIDC token and are skipped.
+on:
+  pull_request:
+    paths:
+      - 'infra/**'
+      - '.github/workflows/infra-plan.yml'
+      - '.github/actions/tf-config/**'
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: infra-plan-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    env:
+      ARM_USE_OIDC: 'true'
+      ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID_PLAN }}
+      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '~> 1.15'
+          terraform_wrapper: false
+
+      - uses: ./.github/actions/tf-config
+        with:
+          tf-vars: ${{ secrets.TF_VARS }}
+          tf-backend: ${{ secrets.TF_BACKEND }}
+
+      - name: Plan (read-only)
+        working-directory: infra
+        shell: bash
+        run: |
+          terraform init -input=false -no-color -backend-config=backend.hcl
+          set +e
+          terraform plan -input=false -no-color -lock=false -detailed-exitcode
+          rc=$?
+          set -e
+          case "$rc" in
+            0) echo "No infrastructure changes." ;;
+            2) echo "The plan above has changes. Nothing was applied." ;;
+            *) echo "terraform plan failed."; exit 1 ;;
+          esac

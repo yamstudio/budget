@@ -1,7 +1,7 @@
 name: Verify production DB access
 
-# Manual, read-only check of the production migration path: approval gate, Azure login, the
-# environment secrets, the firewall opening for this runner, and database access. It lists
+# Manual, read-only check of the production migration path: approval gate, Azure login (OIDC),
+# the production config, the firewall opening for this runner, and database access. It lists
 # migrations (applied vs pending) and writes nothing. Output is deliberately generic because the
 # repository and its Actions logs are public.
 on:
@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 env:
   DOTNET_VERSION: '10.0.x'
@@ -24,29 +25,36 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - uses: ./.github/actions/tf-config
+        with:
+          tf-vars: ${{ secrets.TF_VARS }}
+          tf-backend: ${{ secrets.TF_BACKEND }}
+
       - name: Log into Azure
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
       - name: Open SQL firewall for this runner
         uses: ./.github/actions/prod-sql
         with:
           mode: open
-          connection-string: ${{ secrets.PROD_DB_CONNECTION_STRING }}
-          resource-group: ${{ secrets.PROD_SQL_RESOURCE_GROUP }}
+          connection-string: ${{ env.PROD_DB_CONNECTION }}
+          resource-group: ${{ env.PROD_SQL_RESOURCE_GROUP }}
 
       - name: Read the migration history (read-only)
         uses: ./.github/actions/prod-sql
         with:
           mode: wait
-          connection-string: ${{ secrets.PROD_DB_CONNECTION_STRING }}
-          resource-group: ${{ secrets.PROD_SQL_RESOURCE_GROUP }}
+          connection-string: ${{ env.PROD_DB_CONNECTION }}
+          resource-group: ${{ env.PROD_SQL_RESOURCE_GROUP }}
 
       - name: Close SQL firewall
         if: always()
         uses: ./.github/actions/prod-sql
         with:
           mode: close
-          connection-string: ${{ secrets.PROD_DB_CONNECTION_STRING }}
-          resource-group: ${{ secrets.PROD_SQL_RESOURCE_GROUP }}
+          connection-string: ${{ env.PROD_DB_CONNECTION }}
+          resource-group: ${{ env.PROD_SQL_RESOURCE_GROUP }}
