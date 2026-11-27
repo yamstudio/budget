@@ -17,9 +17,7 @@ import { Navigate, Link, Route, Routes, useLocation, Outlet } from 'react-router
 import Expenses from './Expenses'
 import Incomes from './Incomes'
 import Insights from './insights/Insights'
-import MonthlyComparisonDashboard from './MonthlyComparisonDashboard'
 import { today } from './Queries'
-import YearToDateProgressDashboard from './YearToDateProgressDashboard'
 
 const { Header, Content } = Layout
 const queryClient = new QueryClient({})
@@ -48,28 +46,11 @@ const AppHeader = () => {
       key: '/insights',
       label: <Link to="/insights">Insights</Link>,
     },
-    {
-      key: '/dashboards',
-      label: 'Dashboards',
-      children: [
-        {
-          key: '/dashboards/monthly-comparison',
-          label: <Link to="/dashboards/monthly-comparison">Monthly Comparison</Link>,
-        },
-        {
-          key: '/dashboards/year-to-date-progress',
-          label: <Link to="/dashboards/year-to-date-progress">Year-to-Date Progress</Link>,
-        },
-      ],
-    },
   ]
   const { pathname } = useLocation()
   const selectedKeys = useMemo(() => {
     if (pathname === '/expenses' || pathname === '/incomes' || pathname === '/insights') {
       return [pathname]
-    }
-    if (pathname.startsWith('/dashboards')) {
-      return ['/dashboards', pathname]
     }
     return []
   }, [pathname])
@@ -103,10 +84,7 @@ const App = () => {
               <Route path="expenses" element={<Expenses fromDate={fromDate} toDate={toDate} />} />
               <Route path="incomes" element={<Incomes fromDate={fromDate} toDate={toDate} />} />
               <Route path="insights" element={<Insights queryClient={queryClient} />} />
-              <Route path="dashboards">
-                <Route path="monthly-comparison" element={<MonthlyComparisonDashboard fromDate={fromDate} toDate={toDate} />} />
-                <Route path="year-to-date-progress" element={<YearToDateProgressDashboard toDate={toDate} />} />
-              </Route>
+              <Route path="dashboards/*" element={<Navigate to="/insights" replace />} />
               <Route path="/" element={<Navigate to="expenses" />} />
               <Route path="*" element={<Navigate to="/" />} />
             </Route>

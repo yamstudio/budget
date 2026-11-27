@@ -37,7 +37,7 @@ export const useCreateExpense = (queryClient: QueryClient) =>
       queryExpenses(queryClient, data.date!).forEach(({ queryKey, expenses }) => {
         queryClient.setQueryData(queryKey, [...expenses, data])
       })
-      invalidateExpenseSummary(queryClient, data.date!)
+      invalidateBreakdowns(queryClient, 'expenseBreakdown')
     },
   })
 export const useUpdateExpense = (queryClient: QueryClient) =>
@@ -53,7 +53,7 @@ export const useUpdateExpense = (queryClient: QueryClient) =>
           expenses.map((expense) => (expense.expenseID === expenseID ? data : expense))
         )
       })
-      invalidateExpenseSummary(queryClient, data.date!)
+      invalidateBreakdowns(queryClient, 'expenseBreakdown')
     },
   })
 export const useDeleteExpense = (queryClient: QueryClient) =>
@@ -68,7 +68,7 @@ export const useDeleteExpense = (queryClient: QueryClient) =>
           expenses.filter((expense) => expense.expenseID !== expenseID)
         )
       })
-      invalidateExpenseSummary(queryClient, data.date!)
+      invalidateBreakdowns(queryClient, 'expenseBreakdown')
     },
   })
 
@@ -148,36 +148,9 @@ export const useExpenseCategories = () =>
     staleTime: Infinity,
   })
 
-export const useExpenseSummary = (fromDate: Date, toDate: Date) =>
-  useQuery({
-    initialData: undefined,
-    queryKey: ['expenseSummary', format(fromDate, 'yyyy-MM-dd'), format(toDate, 'yyyy-MM-dd')],
-    staleTime: 300_000,
-    queryFn: () =>
-      api
-        .getExpenseSummary({
-          fromDate: format(fromDate, 'yyyy-MM-dd'),
-          toDate: format(toDate, 'yyyy-MM-dd'),
-          aggregateByExpenseCategory: true,
-        })
-        .then(({ data }) => data),
-  })
 const invalidateBreakdowns = (queryClient: QueryClient, kind: 'expenseBreakdown' | 'incomeBreakdown') => {
   if (kind === 'expenseBreakdown') queryClient.invalidateQueries({ queryKey: ['budgetComparison'] })
   return queryClient.invalidateQueries({ queryKey: [kind] })
-}
-
-const invalidateExpenseSummary = (queryClient: QueryClient, date: string) => {
-  invalidateBreakdowns(queryClient, 'expenseBreakdown')
-  return queryClient.invalidateQueries({
-    exact: false,
-    queryKey: ['expenseSummary'],
-    predicate: ({ queryKey, state }) =>
-      queryKey.length === 3 &&
-      (queryKey[1] as string).localeCompare(date) <= 0 &&
-      (queryKey[2] as string).localeCompare(date) >= 0 &&
-      !!state.data,
-  })
 }
 
 export const useExpenseTemplates = () =>
