@@ -28,7 +28,6 @@ Entra's app list is flat, so every name is prefixed with the app and says what t
 
 | Thing | Pattern | Examples |
 |---|---|---|
-| Resource group | `HMS-<Ship>` | `HMS-Belfast` |
 | Azure resources | prefixed with the app (no hyphen: some names must be globally unique) | `belfastweb` |
 | CI app registrations | `<app>-<purpose>` | `belfast-plan`, `belfast-infra`, `belfast-deploy`, `belfast-migrate` |
 | User sign-in app registration | `<app>-web` | `belfast-web` |
