@@ -20,7 +20,7 @@ The engineering foundation is done (local DB + prod guard, CI gates, API and UI 
 - `Budget.sln` at root.
 
 ## Environments
-- Dev: WSL2 on Arch Linux, zsh. dotnet 10 SDK and node 26 are installed there. (Machine facts verified; CI pins node 25.x and dotnet 10.0.x.)
+- Dev: WSL2 on Arch Linux, zsh. dotnet 10 SDK and node 26 are installed there. (Machine facts verified; CI pins node 26.x and dotnet 10.0.x.)
 - Production: an Azure App Service (Windows, Free tier) with an Azure SQL database (Basic tier, on its own SQL server in the same resource group), deployed from GitHub Actions only when the owner publishes a GitHub Release (tag `v*`); merging to `master` does not deploy (`docs/releasing.md`). Access is restricted by the App Service's Azure AD sign-in (per the owner) to the owner's personal account only; the API itself has no auth or user model, so never expose it outside that layer.
 - Local DB: a throwaway SQL Server container run by Podman (rootless), managed by `scripts/dev-db.zsh`; its generated password lives outside the repo in `~/.config/budget-dev/db.env`. Use `scripts/dev-api.zsh` to run the API against it. The owner's user-secrets may still hold the **production** connection string; the env var from the script overrides it, and the guard below blocks it.
 - Prod database facts: small Basic-tier SQL database, 7-day point-in-time restore, no long-term backup, Azure AD-only auth, public network access enabled.
@@ -30,7 +30,7 @@ The engineering foundation is done (local DB + prod guard, CI gates, API and UI 
 - Never run the API, tests, `dotnet ef`, or any script against a non-local database. `LocalDatabaseGuard` enforces this at startup (only Azure App Service or `BUDGET_ALLOW_REMOTE_DB=1` bypasses it). Never set that variable yourself.
 - Never apply migrations to production, approve the `production-migrations` or `production-infra` environment, create a tag/release, run the deploy workflow, merge to `master`, or touch CI/infra/secrets without the owner's explicit say-so. Production migrations run from CI after owner approval; procedure and rollback: `docs/migrations.md`.
 - Never print or commit connection strings, even the local one. Never commit real financial data.
-- This repo is public and the owner's other projects are not. Never write the names of those projects, their repos, databases, resource groups or other resources into any committed file, workflow, PR title/body or commit message (the existence of a project or database is itself private). Say "other, non-public projects". Same for the SQL server, resource group and state account names.
+- This repo is public. Never write into a committed file, workflow, PR title/body or commit message anything that identifies the production environment (subscription and tenant ids, resource group, SQL server and state-account names, the owner's login), or anything outside this app. Those values live only in gitignored `tfvars`/`backend.hcl` and the `TF_VARS`/`TF_BACKEND` secrets.
 
 ## Commands
 Verified (2026-11-26, WSL2 Arch): `dotnet build -warnaserror`, `dotnet format --verify-no-changes` (`dotnet format` to fix), in `src/UI`: `npm ci`, `npx tsc --noEmit`, `npm run lint`, `npx prettier --check .`, `npm test`, `npm run build`, `scripts/dev-db.zsh up|down|reset|status`, `scripts/test-api.zsh` (API integration tests, 8 passing; creates and drops its own database on the local dev server), `scripts/dev-api.zsh` (API on http://localhost:5054, auto-migrates and seeds synthetic data, swagger at `/swagger`). First `up` pulls a large image and starts slowly.
@@ -50,7 +50,7 @@ Unverified:
 
 ## UI code quality
 The owner was an Angular dev when writing the UI; much of it was copy-pasted between files. Treat it as a starter, not a style guide.
-- The editable grids are now shared: `Expenses.tsx` and `Incomes.tsx` are thin pages over `BudgetGrid.tsx` (layout), `gridColumns.tsx` (column factories), `useEditableRows.ts` (row state hook) and `gridRows.ts` (pure, tested row logic). Build any new editable grid from these; do not copy. Still duplicated: the two dashboards, and the per-entity hooks in `Queries.ts`.
+- The editable grids are shared: `Expenses.tsx` and `Incomes.tsx` are thin pages over `BudgetGrid.tsx` (layout), `gridColumns.tsx` (column factories), `useEditableRows.ts` (row state hook) and `gridRows.ts` (pure, tested row logic). Build any new editable grid from these; do not copy. Still duplicated: the two dashboards, and the per-entity hooks in `Queries.ts`.
 - Prefer small function components, typed props, TanStack Query for server state, derived values over `useState`+`useEffect`, and the generated client types instead of redefining shapes.
 - When touching a file, leave it cleaner (dedupe, types, naming, lint). Keep refactors scoped to the feature at hand, in separate commits from behavior changes where practical.
 - Add tests for new logic (UI: Vitest + Testing Library would fit Vite; API: xUnit). Neither is set up yet; ask before choosing.
@@ -61,7 +61,7 @@ Claude cannot see a browser by default. Use `scripts/ui-screenshot.zsh <url> <Wx
 ## Testing
 - Run API tests: `scripts/test-api.zsh` (starts the local DB if needed). Add tests for any API change; follow `tests/WebApi.Tests/ExpenseApiTests.cs` (each test owns its data: unique lookup rows and its own date range).
 - The tests read the server from `ConnectionStrings__BudgetDbConnection` and replace only the database name; `LocalDatabaseGuard` still blocks non-local servers. In CI a throwaway SQL Server container is started with a runtime-generated password.
-- `dotnet publish` must target `src/WebApi` (the solution now has a test project).
+- `dotnet publish` must target `src/WebApi` (the solution has a test project).
 - PUT endpoints return the stored row with its real id (fixed; `UpdateResponseTests` covers all eight). The UI relies on this to patch its query caches by id.
 
 ## Conventions
@@ -70,15 +70,15 @@ Claude cannot see a browser by default. Use `scripts/ui-screenshot.zsh <url> <Wx
 - Old code is not a style guide. Direction: add features, and improve where touched (add tests for new logic, tidy, add error handling). Avoid sweeping unrelated refactors.
 - C#: nullable enabled, implicit usings, root namespace `YamStudio.Budget.WebApi`.
 
-## Workflow (GitHub Actions) pitfalls, learned the hard way
+## Workflow (GitHub Actions) pitfalls
 - Default `run` steps use `bash -e` without `pipefail`: `failing-command | tee` reports success. Use `shell: bash` and capture output (`out="$(cmd 2>&1)"`) instead of piping.
-- `actions/checkout` wipes the workspace. Never download an artifact into the workspace before a checkout, and deploy from a dedicated directory (`artifact/`), never `.`: that once published the repository (and the CI config files) as the web app and took the site down while the smoke check still passed.
+- `actions/checkout` wipes the workspace. Never download an artifact into the workspace before a checkout, and deploy from a dedicated directory (`artifact/`), never `.`: otherwise the deploy publishes the repository instead of the build, and the smoke check still passes because the sign-in redirect answers regardless.
 - `dotnet ef` does not restore: run `dotnet restore src/WebApi` first on a fresh checkout.
 - `dotnet ef migrations list` swallows connection errors (warns, still lists, exits 0). Check its output for "An error occurred while accessing the database". `database update` does fail loudly.
-- The repo and its Actions logs and job summaries are **public**. Never print server names, runner IPs, or raw driver/EF error text in a workflow (an earlier verify run leaked the SQL server name this way). Use `.github/actions/prod-sql` for anything that touches the production database: it masks the server name, opens and closes a per-run firewall rule, and prints only classified generic failure reasons.
-- Never write `cmd || echo "...ok"` to "tolerate" a failure: it hid a failed firewall-rule delete (`az sql server firewall-rule delete` has no `--yes`) and left a rule behind. Check state first, act, then verify the end state. Wrap `az` calls so their raw errors (subscription and resource ids) are never printed.
+- The repo and its Actions logs and job summaries are **public**. Never print server names, runner IPs, or raw driver/EF error text in a workflow. Use `.github/actions/prod-sql` for anything that touches the production database: it masks the server name, opens and closes a per-run firewall rule, and prints only classified generic failure reasons.
+- Never write `cmd || echo "...ok"` to "tolerate" a failure: it can hide a failed firewall-rule delete (`az sql server firewall-rule delete` has no `--yes`) and leave a rule behind. Check state first, act, then verify the end state. Wrap `az` calls so their raw errors (subscription and resource ids) are never printed.
 - A green workflow run is not proof the step did its job; assert on real output, and test the step script in a fresh clone (`git clone` to a scratch dir) including a deliberate failure.
-- The .NET SDK is pinned to the 10.0 band in `global.json` (the runner default moved to SDK 11); change it together with the target framework.
+- The .NET SDK is pinned to the 10.0 band in `global.json` (the runner's default SDK is newer than the project's); change it together with the target framework.
 
 ## Git workflow
 Branch off `master`, open a PR, squash-merge (confirmed; commit titles end with `(#N)`). Merging does not deploy; CI runs on the PR and again on `master`. Production deploys only on a published release tag, semver `v0.1.0`-style (`docs/releasing.md`). Claude never creates tags or releases and never runs the deploy workflow, and does not merge without the user's say-so. Commit messages: short imperative summary.
