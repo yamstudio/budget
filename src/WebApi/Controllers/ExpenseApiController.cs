@@ -95,51 +95,6 @@ public class ExpenseApiController : ControllerBase
         return expenseToDelete;
     }
 
-    [HttpGet("summary", Name = "Get Expense Summary")]
-    public ExpenseSummary GetExpenseSummary(
-        [BindRequired, FromQuery(Name = "fromDate")] DateOnly fromDate,
-        [BindRequired, FromQuery(Name = "toDate")] DateOnly toDate,
-        [FromQuery(Name = "aggregateByExpenseCategory")] bool aggregateByExpenseCategory
-    )
-    {
-        var periods = (
-            from expense in _context.Expenses
-            where expense.Date >= fromDate
-            where expense.Date <= toDate
-            group expense by new
-            {
-                expense.Date.Year,
-                expense.Date.Month,
-                ExpenseCategoryID = aggregateByExpenseCategory ? expense.ExpenseCategoryID : -1,
-            } into g
-            select new
-            {
-                g.Key.Year,
-                g.Key.Month,
-                Amount = g.Sum(e => e.Amount),
-                g.Key.ExpenseCategoryID,
-            }
-        )
-            .AsEnumerable()
-            .Select(g =>
-            {
-                DateOnly monthStart = new(g.Year, g.Month, 1);
-                DateOnly monthEnd = monthStart.AddMonths(1).AddDays(-1);
-                return new ExpenseSummaryPeriod
-                {
-                    FromDate = monthStart < fromDate ? fromDate : monthStart,
-                    ToDate = monthEnd > toDate ? toDate : monthEnd,
-                    Amount = g.Amount,
-                    ExpenseCategoryID = aggregateByExpenseCategory ? g.ExpenseCategoryID : null,
-                };
-            })
-        .ToImmutableList();
-        return new ExpenseSummary
-        {
-            Periods = periods,
-        };
-    }
-
     [HttpGet("templates", Name = "Get Expense Templates")]
     public ActionResult<ICollection<ExpenseTemplate>> GetExpenseTemplates(
         [BindRequired, FromQuery(Name = "fromDate")] DateOnly fromDate,
