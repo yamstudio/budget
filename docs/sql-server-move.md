@@ -16,7 +16,7 @@ anything until the owner has confirmed the copy matches.
 | 3. Owner verifies the copy is identical (below) | done: every table's `n` and `chk` and the users matched |
 | 4. Cutover: Terraform imports the new DB, forgets the old server/DB/rule, connection string switches | done (applied 2026-11-27) |
 | 5. Delete the old `budget` database from the shared server (never the server itself) | **open**, owner, once the app is confirmed working on the new server |
-| 6. Point `infra/identity` at the new server and update `docs/identities.md` (it still describes the shared server) | open |
+| 6. Point `infra/identity` at the new server and update `docs/identities.md` | done in code; the owner still applies `infra/identity` (`docs/identities.md`, Manual steps) |
 
 The app keeps using the old database until step 4. The old database is never modified by any step before 5.
 

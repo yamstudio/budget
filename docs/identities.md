@@ -24,8 +24,8 @@ never a shared one: sharing is exactly how the old `GitHub-Automation` became ov
 ## Two Terraform layers, two appliers
 
 ```
-infra/identity/   Entra + role assignments.   Applied by the OWNER from a laptop, rarely.   State: identity.tfstate
-infra/            web app, plan, SQL, DB.     Applied by CI as belfast-infra, after approval. State: budget.tfstate
+infra/identity/   Entra + role assignments.   Applied by the OWNER from a laptop, rarely.   State: identity.tfstate (container tfstate-identity)
+infra/            web app, plan, SQL, DB.     Applied by CI as belfast-infra, after approval. State: budget.tfstate (container tfstate)
 ```
 
 **The rule: the identity that can change infrastructure must never be able to change who is allowed to.** So
@@ -58,20 +58,24 @@ A workflow job needs `permissions: { id-token: write, contents: read }` to reque
 | Identity | Scope | Role |
 |---|---|---|
 | plan | web resource group | Reader |
-| plan | SQL server | Reader |
-| plan | Terraform state account | Storage Blob Data Reader |
-| infra | web resource group | Contributor |
-| infra | SQL server | Contributor |
-| infra | Terraform state account | Storage Blob Data Contributor |
+| plan | state container `tfstate` | Storage Blob Data Reader |
+| infra | web resource group | Reader (only to look the group up) |
+| infra | App Service plan, web app, SQL server (each one) | Contributor |
+| infra | state container `tfstate` | Storage Blob Data Contributor |
 | deploy | the web app only | Website Contributor |
 | migrate | SQL server | `belfast-sql-firewall-rule-writer` (custom: firewall rules read/write/delete only) |
 | migrate | `budget` database | `db_ddladmin`, `db_datareader`, `db_datawriter` (a SQL user, **manual**, see below) |
 
 Consequences worth remembering:
 - `deploy` cannot alter the schema, and `migrate` cannot ship code.
-- Nothing here can touch the server's other databases (they belong to other, non-public projects).
-- The SQL server is **shared** with those projects, so `migrate`'s firewall right is server-wide. Accepted until
-  they move to their own server.
+- **CI cannot reach the Terraform state account or the identity layer's state.** `infra` has Contributor on the three
+  resources it manages, *not* on the resource group, because the state account lives in that group: a group-wide
+  Contributor could re-enable shared-key access and read state (which can hold secrets). The state roles are scoped to
+  the `tfstate` container only; the identity layer's state is in a different container (`tfstate-identity`) that no CI
+  identity has any right on.
+- Consequence: CI can change the existing web app, plan and SQL server but **cannot create a new top-level resource**.
+  Adding one is an owner step: apply once from the laptop, or add a row to the `grants` table.
+- The SQL server holds only this app's database, so `migrate`'s server-wide firewall right affects nothing else.
 - `plan` runs on pull requests from any same-repo branch, so it must stay read-only.
 
 ## Manual steps (Terraform cannot do these), in order
@@ -98,7 +102,7 @@ Consequences worth remembering:
 ## Do not
 
 - **Delete or edit `GitHub-Automation`.** It is the *old* shared identity, also used by other projects (it has rights
-  on other resource groups and on the shared server). This repo stops using it; deleting
+  on other resource groups). This repo stops using it; deleting
   it is a separate decision for after those projects have moved. Its current client secret expires **2026-12-22**.
 - **Rename `Belfast Web Role Account`.** It is the Entra app behind the web app's login page, not a CI identity.
 - **Make a CI identity able to apply `infra/identity/`.** See the rule above.
@@ -126,5 +130,5 @@ from `infra/` to `infra/identity/`. `infra/identity/imports.tf` adopts them; `in
 - Whether a federated credential works for the web app's sign-in on the Free App Service tier is unverified; fall back
   to a Key Vault reference if it does not.
 - The SQL DDL permission for `belfast-migrate` is only proven by the first real migration.
-- Stale SQL firewall rules (two client-IP rules) and SCM basic auth on the web app are still open (the latter goes
-  away when deploys use `belfast-deploy`).
+- SCM basic auth on the web app is still on (it goes away when deploys use `belfast-deploy`).
+- `belfast-infra` can read the web app's settings, including the Entra client secret, until PR 3 removes that secret.

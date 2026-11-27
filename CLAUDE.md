@@ -21,7 +21,7 @@ The engineering foundation is done and proven end to end (local DB + prod guard,
 
 ## Environments
 - Dev: WSL2 on Arch Linux, zsh. dotnet 10 SDK and node 26 are installed there. (Machine facts verified; CI pins node 25.x and dotnet 10.0.x.)
-- Production: an Azure App Service (Windows/Linux not verified) with an Azure SQL database (Basic tier, on a SQL server in a different resource group from the web app; the App Service is on the Free tier), deployed from GitHub Actions only when the owner publishes a GitHub Release (tag `v*`); merging to `master` does not deploy (`docs/releasing.md`). Access is restricted by the App Service's Azure AD sign-in (per the owner) to the owner's personal account only; the API itself has no auth or user model, so never expose it outside that layer.
+- Production: an Azure App Service (Windows/Linux not verified) with an Azure SQL database (Basic tier, on its own SQL server in the same resource group as the web app, moved there on 2026-11-27; the App Service is on the Free tier), deployed from GitHub Actions only when the owner publishes a GitHub Release (tag `v*`); merging to `master` does not deploy (`docs/releasing.md`). Access is restricted by the App Service's Azure AD sign-in (per the owner) to the owner's personal account only; the API itself has no auth or user model, so never expose it outside that layer.
 - Local DB: a throwaway SQL Server container run by Podman (rootless), managed by `scripts/dev-db.zsh`; its generated password lives outside the repo in `~/.config/budget-dev/db.env`. Use `scripts/dev-api.zsh` to run the API against it. The owner's user-secrets may still hold the **production** connection string; the env var from the script overrides it, and the guard below blocks it.
 - Prod database facts (checked via az CLI, read-only): small Basic-tier SQL database, 7-day point-in-time restore, no long-term backup, Azure AD-only auth, public network access enabled.
 
@@ -93,7 +93,7 @@ Branch off `master`, open a PR, squash-merge (confirmed; commit titles end with 
 - Deploy workflow runs the ARM deployment on every release (after checks pass). Release-time smoke check only proves the app answers.
 - The generated API client depends on a gitignored swagger file, so regenerating is a manual step easily forgotten after API changes.
 - Dependency advisories: `npm audit` was cleaned to 0 on 2026-11-26 (`npm audit fix`, lockfile only). PR CI fails on high-severity advisories in production npm dependencies (`npm audit --omit=dev --audit-level=high`) and on any NuGet advisory (via `-warnaserror`). `dependency-audit.yml` runs weekly (Mondays) over everything including dev tooling. A new advisory can therefore block a deploy until dependencies are bumped; fix with `npm audit fix` or a package bump rather than loosening the gate.
-- Stale SQL server firewall rules (two old client-IP rules) exist beside the broad "Allow Azure services" rule; consider removing them.
+- The app's SQL server has only the "Allow Azure services" firewall rule (the stale client-IP rules stayed on the old shared server).
 
 ## Accepted risks (owner decision, 2026-11-26)
 - Rules in this file are instructions, not enforced: there are no project permission rules (`.claude/settings.json`) blocking merges, `az` writes or the DB-guard override. Master branch protection (required `api`/`ui` checks, up-to-date branch, applies to admins, no force-push) is the one hard control.

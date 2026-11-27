@@ -12,8 +12,9 @@ terraform {
     }
   }
 
-  # Own state file (key identity.tfstate), separate from ../ (budget.tfstate): this layer is
-  # applied by the owner from a laptop, never by CI. Names come from -backend-config=backend.hcl.
+  # Own state, in its OWN container (tfstate-identity), separate from ../ (container tfstate): this layer is applied
+  # by the owner from a laptop, never by CI, and no CI identity may have any right on this container.
+  # Names come from -backend-config=backend.hcl.
   backend "azurerm" {
     use_azuread_auth = true
   }
