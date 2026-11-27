@@ -23,12 +23,12 @@ Personal budgeting web app (expenses, incomes, monthly comparison and year-to-da
 - Design and rollout plan: `docs/repo-hardening-design.md`.
 
 ## Commands
-Verified (2026-11-26, WSL2 Arch): `dotnet build -warnaserror`, `dotnet format --verify-no-changes` (`dotnet format` to fix), in `src/UI`: `npm ci`, `npx tsc --noEmit`, `npm run lint`, `npx prettier --check .`, `npm run build`, `scripts/dev-db.zsh up|down|reset|status`, `scripts/test-api.zsh` (API integration tests, 8 passing; creates and drops its own database on the local dev server), `scripts/dev-api.zsh` (API on http://localhost:5054, auto-migrates and seeds synthetic data, swagger at `/swagger`). First `up` pulls a large image and starts slowly.
+Verified (2026-11-26, WSL2 Arch): `dotnet build -warnaserror`, `dotnet format --verify-no-changes` (`dotnet format` to fix), in `src/UI`: `npm ci`, `npx tsc --noEmit`, `npm run lint`, `npx prettier --check .`, `npm test`, `npm run build`, `scripts/dev-db.zsh up|down|reset|status`, `scripts/test-api.zsh` (API integration tests, 8 passing; creates and drops its own database on the local dev server), `scripts/dev-api.zsh` (API on http://localhost:5054, auto-migrates and seeds synthetic data, swagger at `/swagger`). First `up` pulls a large image and starts slowly.
 Unverified:
 - UI dev server: `cd src/UI && npm start` (Vite proxies `/api` to localhost:5054); the UI against the local API has not been exercised.
 - Regenerate client: `npm run genclient` in `src/UI`. It reads `src/UI/swagger/swagger.json` (gitignored), so first save the running API's Swagger JSON there. Unverified.
 - EF migrations: `dotnet ef` (not verified that the tool is installed).
-- UI tests: none exist yet.
+- UI tests: Vitest + Testing Library (jsdom), `npm test` in `src/UI`; 7 tests in `src/Queries.test.tsx` cover the cache-patching mutation hooks (the API client is mocked with `vi.mock('./gensrc/Api')`). Components and dashboards are untested. Config lives in the `test` block of `vite.config.ts`.
 
 ## Roadmap (owner's stated direction, in rough order)
 1. Raise UI code quality (see below), alongside any feature touching that code.
@@ -70,3 +70,4 @@ Branch off `master`, open a PR, squash-merge (confirmed; commit titles end with 
 - Controllers are repetitive per-entity CRUD (not audited in depth; validation and error handling not yet reviewed).
 - Deploy workflow runs ARM deployment on every push to `master` (after checks pass).
 - The generated API client depends on a gitignored swagger file, so regenerating is a manual step easily forgotten after API changes.
+- `npm audit` reports 20 vulnerabilities (10 moderate, 10 high; includes vite dev-server advisories and zod) in the UI dependency tree as of 2026-11-26. Not yet fixed or gated in CI; try `npm audit fix` in its own PR.

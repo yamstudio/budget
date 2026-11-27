@@ -58,5 +58,7 @@ jobs:
         run: npm run lint
       - name: Check formatting
         run: npx prettier --check .
+      - name: Unit tests
+        run: npm test
       - name: Build
         run: npm run build
