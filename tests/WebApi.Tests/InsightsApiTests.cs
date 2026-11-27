@@ -6,7 +6,8 @@ namespace YamStudio.Budget.WebApi.Tests;
 
 public class InsightsApiTests(ApiFixture api) : ApiTestBase(api)
 {
-    private Task<List<BreakdownRow>> GetRowsAsync(string url) => Client.GetFromJsonAsync<List<BreakdownRow>>(url)!;
+    private Task<List<BreakdownRow>> GetRowsAsync(string url) => GetRowsAsync<BreakdownRow>(url);
+    private Task<List<T>> GetRowsAsync<T>(string url) => Client.GetFromJsonAsync<List<T>>(url)!;
 
     private async Task<int> CreateCategoryAsync(string necessity)
     {
@@ -132,5 +133,69 @@ public class InsightsApiTests(ApiFixture api) : ApiTestBase(api)
         Assert.Equal(HttpStatusCode.BadRequest, (await Client.GetAsync("/api/insights/expenses?fromDate=2010-01-01&toDate=2010-01-31")).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await Client.GetAsync("/api/insights/expenses?fromDate=2010-02-01&toDate=2010-01-31&groupBy=Category")).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await Client.GetAsync("/api/insights/incomes?fromDate=2010-01-01&toDate=2010-01-31&groupBy=Nope")).StatusCode);
+    }
+
+    private Task<Models.Budget> CreateBudgetAsync(int categoryId, decimal amount, string from, string to) =>
+        PostAsync<Models.Budget>("/api/budgets", new { expenseCategoryID = categoryId, amount, fromDate = from, toDate = to });
+
+    [Fact]
+    public async Task Budget_comparison_sums_overlapping_budgets_and_compares_with_actual_spending()
+    {
+        var (category, vendor, method) = await CreateLookupsAsync();
+        await CreateBudgetAsync(category, 1000m, "2016-01-01", "2016-12-31");
+        await CreateBudgetAsync(category, 50m, "2016-06-01", "2016-06-30");
+        await CreateBudgetAsync(category, 9999m, "2015-01-01", "2015-12-31"); // does not overlap
+        await CreateExpenseAsync(category, vendor, method, 120m, "2016-06-10");
+        await CreateExpenseAsync(category, vendor, method, 30m, "2016-06-20");
+        await CreateExpenseAsync(category, vendor, method, 500m, "2016-08-01"); // outside the range
+
+        var rows = await GetRowsAsync<BudgetComparisonRow>("/api/insights/budget?fromDate=2016-06-01&toDate=2016-06-30");
+        var row = rows.Single(r => r.Key == category);
+        Assert.Equal((1050m, 150m), (row.Budget, row.Actual));
+    }
+
+    [Fact]
+    public async Task Budget_comparison_includes_unbudgeted_spending_and_unspent_budgets()
+    {
+        var (spentOnly, vendor, method) = await CreateLookupsAsync();
+        var (budgetOnly, _, _) = await CreateLookupsAsync();
+        await CreateExpenseAsync(spentOnly, vendor, method, 40m, "2017-03-05");
+        await CreateBudgetAsync(budgetOnly, 200m, "2017-03-01", "2017-03-31");
+
+        var rows = await GetRowsAsync<BudgetComparisonRow>("/api/insights/budget?fromDate=2017-03-01&toDate=2017-03-31");
+        Assert.Equal((0m, 40m), (rows.Single(r => r.Key == spentOnly).Budget, rows.Single(r => r.Key == spentOnly).Actual));
+        Assert.Equal((200m, 0m), (rows.Single(r => r.Key == budgetOnly).Budget, rows.Single(r => r.Key == budgetOnly).Actual));
+    }
+
+    [Fact]
+    public async Task Budget_comparison_filters_by_category_necessity_and_vendor()
+    {
+        var (_, vendor, method) = await CreateLookupsAsync();
+        var (_, otherVendor, _) = await CreateLookupsAsync();
+        var essential = await CreateCategoryAsync("Essential");
+        var discretionary = await CreateCategoryAsync("Discretionary");
+        foreach (var category in new[] { essential, discretionary })
+        {
+            await CreateBudgetAsync(category, 100m, "2018-05-01", "2018-05-31");
+            await CreateExpenseAsync(category, vendor, method, 10m, "2018-05-02");
+            await CreateExpenseAsync(category, otherVendor, method, 1m, "2018-05-03");
+        }
+
+        var byNecessity = await GetRowsAsync<BudgetComparisonRow>("/api/insights/budget?fromDate=2018-05-01&toDate=2018-05-31&necessities=Discretionary");
+        Assert.Contains(byNecessity, r => r.Key == discretionary);
+        Assert.DoesNotContain(byNecessity, r => r.Key == essential);
+
+        var byCategory = await GetRowsAsync<BudgetComparisonRow>($"/api/insights/budget?fromDate=2018-05-01&toDate=2018-05-31&expenseCategoryIds={essential}");
+        Assert.Equal((100m, 11m), (Assert.Single(byCategory).Budget, byCategory[0].Actual));
+
+        var byVendor = await GetRowsAsync<BudgetComparisonRow>($"/api/insights/budget?fromDate=2018-05-01&toDate=2018-05-31&expenseCategoryIds={essential}&vendorIds={vendor}");
+        Assert.Equal((100m, 10m), (byVendor[0].Budget, byVendor[0].Actual)); // vendor narrows spending only
+    }
+
+    [Fact]
+    public async Task Budget_comparison_rejects_bad_ranges()
+    {
+        Assert.Equal(HttpStatusCode.BadRequest, (await Client.GetAsync("/api/insights/budget?fromDate=2010-02-01&toDate=2010-01-31")).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await Client.GetAsync("/api/insights/budget?fromDate=2010-02-01")).StatusCode);
     }
 }
