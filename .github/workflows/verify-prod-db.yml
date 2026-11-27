@@ -1,0 +1,36 @@
+name: Verify production DB access
+
+# Manual, read-only check of the production migration path: approval gate, Azure login, the
+# environment secret, and database access. It lists migrations (applied vs pending) and writes nothing.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: '10.0.x'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    environment: production-migrations
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Log into Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: List migrations (read-only)
+        env:
+          PROD_DB_CONNECTION: ${{ secrets.PROD_DB_CONNECTION_STRING }}
+          BUDGET_ALLOW_REMOTE_DB: '1'
+        run: |
+          dotnet tool restore
+          dotnet ef migrations list --project src/WebApi --connection "$PROD_DB_CONNECTION" | tee -a "$GITHUB_STEP_SUMMARY"

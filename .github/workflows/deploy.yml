@@ -78,9 +78,86 @@ jobs:
           template: .azure/Belfast.Template.json
           parameters: .azure/Belfast.Parameters.json
 
+  # Decide whether this push changes the database schema and, if so, publish the exact SQL for review.
+  plan-migrations:
+    needs: checks
+    runs-on: ubuntu-latest
+    outputs:
+      has_migrations: ${{ steps.diff.outputs.has_migrations }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Did this push touch migrations?
+        id: diff
+        run: |
+          before="${{ github.event.before }}"
+          if [[ "$before" =~ ^0+$ ]] || ! git cat-file -e "$before^{commit}" 2>/dev/null; then
+            changed=true
+          elif git diff --quiet "$before" "${{ github.sha }}" -- src/WebApi/Migrations; then
+            changed=false
+          else
+            changed=true
+          fi
+          echo "has_migrations=$changed" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-dotnet@v5
+        if: steps.diff.outputs.has_migrations == 'true'
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Generate the idempotent migration script for review
+        if: steps.diff.outputs.has_migrations == 'true'
+        env:
+          # Script generation never connects to a database; this dummy local value only satisfies the local-DB guard.
+          ConnectionStrings__BudgetDbConnection: Server=127.0.0.1,1433;Database=unused
+        run: |
+          dotnet tool restore
+          dotnet ef migrations script --idempotent --project src/WebApi --output migrate.sql
+          {
+            echo "### Pending production migration"
+            echo "Review the SQL below, then approve the **production-migrations** environment to apply it."
+            echo '```sql'
+            cat migrate.sql
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # Applies pending EF migrations to production. Runs only when migrations changed, and only after a
+  # required reviewer approves the production-migrations environment (configured in GitHub settings).
+  migrate:
+    needs: [checks, plan-migrations]
+    if: needs.plan-migrations.outputs.has_migrations == 'true'
+    runs-on: ubuntu-latest
+    environment: production-migrations
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Log into Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Apply migrations
+        env:
+          # Connection string WITHOUT a password, using Azure AD auth (Authentication=Active Directory Default).
+          PROD_DB_CONNECTION: ${{ secrets.PROD_DB_CONNECTION_STRING }}
+          # The one sanctioned place that bypasses the local-database guard.
+          BUDGET_ALLOW_REMOTE_DB: '1'
+        run: |
+          echo "Restore point (UTC): $(date -u +%Y-%m-%dT%H:%M:%SZ). Point-in-time restore covers the last 7 days." | tee -a "$GITHUB_STEP_SUMMARY"
+          dotnet tool restore
+          dotnet ef database update --project src/WebApi --connection "$PROD_DB_CONNECTION"
+
   deploy:
     runs-on: ubuntu-latest
-    needs: [build, arm-deploy]
+    # Run when migrations were applied or not needed; never when anything upstream failed.
+    needs: [build, arm-deploy, migrate]
+    if: ${{ !failure() && !cancelled() }}
     environment:
       name: 'production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
@@ -98,3 +175,16 @@ jobs:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+
+      - name: Smoke check (app is up; sign-in redirect counts as up)
+        env:
+          URL: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+        run: |
+          for i in {1..20}; do
+            code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$URL" || true)"
+            case "$code" in
+              200|301|302|401|403) echo "App is up (HTTP $code)"; exit 0 ;;
+            esac
+            echo "Attempt $i: HTTP $code"; sleep 10
+          done
+          echo "App did not come up after deploy"; exit 1

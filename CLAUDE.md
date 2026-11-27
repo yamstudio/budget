@@ -18,7 +18,7 @@ Personal budgeting web app (expenses, incomes, monthly comparison and year-to-da
 
 ## Data safety rules (read first)
 - Never run the API, tests, `dotnet ef`, or any script against a non-local database. `LocalDatabaseGuard` enforces this at startup (only Azure App Service or `BUDGET_ALLOW_REMOTE_DB=1` bypasses it). Never set that variable yourself.
-- Never apply migrations to production, deploy, merge to `master`, or touch CI/infra/secrets without the owner's explicit say-so. Migration procedure: `docs/migrations.md`.
+- Never apply migrations to production, approve the `production-migrations` environment, deploy, merge to `master`, or touch CI/infra/secrets without the owner's explicit say-so. Production migrations run from CI after owner approval; procedure and rollback: `docs/migrations.md`.
 - Never print or commit connection strings, even the local one. Never commit real financial data.
 - Design and rollout plan: `docs/repo-hardening-design.md`.
 
@@ -27,7 +27,7 @@ Verified (2026-11-26, WSL2 Arch): `dotnet build -warnaserror`, `dotnet format --
 Unverified:
 - UI dev server: `cd src/UI && npm start` (Vite proxies `/api` to localhost:5054); the UI against the local API has not been exercised.
 - Regenerate client: `npm run genclient` in `src/UI`. It reads `src/UI/swagger/swagger.json` (gitignored), so first save the running API's Swagger JSON there. Unverified.
-- EF migrations: `dotnet ef` (not verified that the tool is installed).
+- EF migrations: `dotnet tool restore` then `dotnet tool run dotnet-ef ...` (local tool pinned in `dotnet-tools.json`; verified: `database update` on a fresh local DB, twice, and `migrations script --idempotent`). Production run from CI is unverified until the first real migration.
 - UI tests: Vitest + Testing Library (jsdom), `npm test` in `src/UI`; 26 tests: `Queries.test.tsx` (cache-patching mutation hooks, API client mocked with `vi.mock('./gensrc/Api')`), `gridRows.test.ts` and `useEditableRows.test.ts` (grid logic), `Grids.test.tsx` (smoke: Expenses/Incomes mount with AG Grid in jsdom; no cleanup is automatic, so tests call `cleanup`). Interactions, dashboards and real browser behavior are untested. Config lives in the `test` block of `vite.config.ts`.
 
 ## Roadmap (owner's stated direction, in rough order)
@@ -71,3 +71,4 @@ Branch off `master`, open a PR, squash-merge (confirmed; commit titles end with 
 - Deploy workflow runs ARM deployment on every push to `master` (after checks pass).
 - The generated API client depends on a gitignored swagger file, so regenerating is a manual step easily forgotten after API changes.
 - Dependency advisories: `npm audit` was cleaned to 0 on 2026-11-26 (`npm audit fix`, lockfile only). PR CI fails on high-severity advisories in production npm dependencies (`npm audit --omit=dev --audit-level=high`) and on any NuGet advisory (via `-warnaserror`). `dependency-audit.yml` runs weekly (Mondays) over everything including dev tooling. A new advisory can therefore block a deploy until dependencies are bumped; fix with `npm audit fix` or a package bump rather than loosening the gate.
+- Stale SQL server firewall rules (two old client-IP rules) exist beside the broad "Allow Azure services" rule; consider removing them.
