@@ -1,0 +1,86 @@
+name: Production SQL access for this runner
+description: >
+  Opens or closes a temporary Azure SQL firewall rule for this runner's public IP, or waits until the
+  production database is reachable. Requires azure/login first. Never prints the server name, the
+  runner IP or raw driver errors (the repo and its Actions logs are public).
+
+inputs:
+  mode:
+    description: open | close | wait
+    required: true
+  connection-string:
+    description: Production connection string (secret), Azure AD auth, no password
+    required: true
+  resource-group:
+    description: Resource group of the SQL server (secret)
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        MODE: ${{ inputs.mode }}
+        CONN: ${{ inputs.connection-string }}
+        RG: ${{ inputs.resource-group }}
+        BUDGET_ALLOW_REMOTE_DB: '1'
+      run: |
+        set -euo pipefail
+
+        # Server name = the part before .database.windows.net in "Server=tcp:<name>.database...,1433".
+        server="$(sed -nE 's/.*[Ss]erver=(tcp:)?([^.,;]+)\..*/\2/p' <<< "$CONN")"
+        [[ -n "$server" ]] || { echo "Could not read the server name from the connection string secret."; exit 1; }
+        echo "::add-mask::$server"
+        rule="gh-actions-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+
+        # Classifies EF output into a safe, generic reason. Returns 0 when the database was read.
+        classify() {
+          local out="$1"
+          if ! grep -qE "An error occurred while accessing the database|Pending status not shown" <<< "$out"; then
+            reason=ok; return 0
+          fi
+          if grep -q "is not allowed to access the server" <<< "$out"; then reason=firewall
+          elif grep -qE "Login failed|login failed|Cannot authenticate|Authentication failed|ManagedIdentity|DefaultAzureCredential" <<< "$out"; then reason=login
+          elif grep -q "Cannot open database" <<< "$out"; then reason=database
+          else reason=other; fi
+          return 1
+        }
+
+        case "$MODE" in
+          open)
+            ip="$(curl -fsS --max-time 20 https://api.ipify.org)"
+            echo "::add-mask::$ip"
+            az sql server firewall-rule create --resource-group "$RG" --server "$server" --name "$rule" \
+              --start-ip-address "$ip" --end-ip-address "$ip" --output none
+            echo "Opened a temporary firewall rule for this runner."
+            ;;
+          close)
+            az sql server firewall-rule delete --resource-group "$RG" --server "$server" --name "$rule" --yes --output none \
+              || echo "No firewall rule to remove (it was never opened)."
+            echo "Temporary firewall rule closed."
+            ;;
+          wait)
+            dotnet tool restore > /dev/null
+            dotnet restore src/WebApi > /dev/null
+            for attempt in {1..10}; do
+              rc=0
+              out="$(dotnet ef migrations list --project src/WebApi --connection "$CONN" 2>&1)" || rc=$?
+              (( rc == 0 )) || { echo "dotnet ef failed unexpectedly (exit $rc); not showing its output."; exit 1; }
+              if classify "$out"; then
+                echo "Database reachable. Migrations in the code (Pending = not yet applied):"
+                migrations="$(grep -E '^[0-9]{14}_' <<< "$out")"
+                echo "$migrations"
+                { echo "### Production migration history"; echo '```'; echo "$migrations"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+                exit 0
+              fi
+              case "$reason" in
+                firewall) echo "Attempt $attempt/10: firewall rule not effective yet, waiting 30s..."; sleep 30 ;;
+                login)    echo "Database login failed: is the CI service principal a database user (see docs/migrations.md)?"; exit 1 ;;
+                database) echo "The database could not be opened: check the Database= part of the connection string secret."; exit 1 ;;
+                *)        echo "Could not read the migration history (reason not recognised; raw output withheld)."; exit 1 ;;
+              esac
+            done
+            echo "Still blocked by the firewall after 5 minutes."; exit 1
+            ;;
+          *) echo "Unknown mode $MODE"; exit 2 ;;
+        esac

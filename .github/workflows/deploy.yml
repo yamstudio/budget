@@ -182,6 +182,20 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Open SQL firewall for this runner
+        uses: ./.github/actions/prod-sql
+        with:
+          mode: open
+          connection-string: ${{ secrets.PROD_DB_CONNECTION_STRING }}
+          resource-group: ${{ secrets.PROD_SQL_RESOURCE_GROUP }}
+
+      - name: Wait until the production database is reachable
+        uses: ./.github/actions/prod-sql
+        with:
+          mode: wait
+          connection-string: ${{ secrets.PROD_DB_CONNECTION_STRING }}
+          resource-group: ${{ secrets.PROD_SQL_RESOURCE_GROUP }}
+
       - name: Apply migrations
         env:
           # Connection string WITHOUT a password, using Azure AD auth (Authentication=Active Directory Default).
@@ -194,6 +208,15 @@ jobs:
           dotnet tool restore
           dotnet restore src/WebApi
           dotnet ef database update --project src/WebApi --connection "$PROD_DB_CONNECTION"
+
+
+      - name: Close SQL firewall
+        if: always()
+        uses: ./.github/actions/prod-sql
+        with:
+          mode: close
+          connection-string: ${{ secrets.PROD_DB_CONNECTION_STRING }}
+          resource-group: ${{ secrets.PROD_SQL_RESOURCE_GROUP }}
 
   deploy:
     runs-on: ubuntu-latest
