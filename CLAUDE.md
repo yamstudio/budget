@@ -70,7 +70,7 @@ Claude cannot see a browser by default. Use `scripts/ui-screenshot.zsh <url> <Wx
 - The .NET SDK is pinned to the 10.0 band in `global.json` (the runner default moved to SDK 11); change it together with the target framework.
 
 ## Git workflow
-Branch off `master`, open a PR, squash-merge (confirmed; commit titles end with `(#N)`). Merging does not deploy; CI runs on the PR and again on `master`. Production deploys only on a published release tag (`docs/releasing.md`). Claude never creates tags or releases and never runs the deploy workflow, and does not merge without the user's say-so. Commit messages: short imperative summary.
+Branch off `master`, open a PR, squash-merge (confirmed; commit titles end with `(#N)`). Merging does not deploy; CI runs on the PR and again on `master`. Production deploys only on a published release tag, semver `v0.1.0`-style (`docs/releasing.md`). The write-up of what we learned getting prod DB migrations working from CI (reusable for other stacks sharing the SQL host) is `docs/ci-prod-db-lessons.md`. Claude never creates tags or releases and never runs the deploy workflow, and does not merge without the user's say-so. Commit messages: short imperative summary.
 
 ## Known deficiencies / risks
 - API has integration tests (`tests/WebApi.Tests`, xunit v3 on Microsoft.Testing.Platform, opted in via `global.json`): the real API against real SQL Server with the real migrations, one fresh database per run. They cover migrations applying cleanly, no missing migration for model changes, and expense CRUD/summary/templates. Everything else (other controllers, budget, income) and the whole UI are untested.
