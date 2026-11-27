@@ -9,18 +9,35 @@ Read `docs/repo-hardening-design.md` for context. Never put connection strings, 
 
 ## Creating a migration
 1. Change the model.
-2. With the local DB env loaded (`set -a; source ~/.config/budget-dev/db.env; set +a`): `dotnet ef migrations add <Name> --project src/WebApi`.
+2. With the local DB env loaded (`set -a; source ~/.config/budget-dev/db.env; set +a`): `dotnet tool restore` once, then `dotnet ef migrations add <Name> --project src/WebApi`.
 3. Start the API locally to confirm it applies cleanly, and commit the migration files with the PR.
 4. Destructive changes (drop/rename column, narrowing a type) go in two releases: expand (add new, dual-write), then contract (remove old) in a later release.
 
-## Applying to production (manual, until the deploy pipeline does it)
-Status: **procedure unverified**; the owner previously ran `dotnet ef` by hand and has not done so recently. Claude must not run these steps; the owner does, or explicitly directs each one.
-1. Merge and deploy are separate from migration. Prefer additive migrations that the currently deployed app tolerates, apply the migration, then deploy.
-2. Backup: production has point-in-time restore (7 days at last check) and no long-term retention. Before any non-trivial migration, make a manual copy or export of the database and confirm it succeeded.
-3. Generate and review the SQL: `dotnet ef migrations script --idempotent --project src/WebApi -o <file outside the repo>` (with the local DB env loaded; the script is generated from the model, it does not touch the DB).
-4. Apply the reviewed script to production using an Azure AD-authenticated SQL tool. Only for this step may `BUDGET_ALLOW_REMOTE_DB=1` be set, if the tool goes through the app/EF.
-5. Verify: spot-check row counts/new columns, then load the deployed app.
-6. Record anything that surprised you here.
+## Applying to production (automated, with approval)
+Migrations are applied by `.github/workflows/deploy.yml` on pushes to `master` that change `src/WebApi/Migrations`:
+1. `plan-migrations` detects the change, generates the idempotent SQL (`dotnet ef migrations script --idempotent`) and prints it in the run summary for review.
+2. `migrate` waits for a required reviewer to approve the **production-migrations** GitHub environment, logs into Azure as the CI service principal, notes the restore point time, and runs `dotnet ef database update` against production with `BUDGET_ALLOW_REMOTE_DB=1` (the only sanctioned use of that override).
+3. `deploy` runs only after `migrate` succeeded or was not needed. After deploying it smoke-checks that the app answers (a redirect to sign-in counts as up).
+Pushes that do not touch migrations skip the approval gate entirely.
+
+CI also proves the exact `dotnet ef database update` command on a fresh database, twice (second run must be a no-op), on every PR.
+
+Rules:
+- Prefer additive migrations: the migration runs before the new code is deployed, so the old code must tolerate the new schema. Destructive changes are split into expand then contract across two releases.
+- Rollback: the database has 7-day point-in-time restore and no long-term backup. Each migration run records its restore point (UTC) in the run summary. To roll back, restore the database to that time (Azure portal or `az sql db restore`), then redeploy the previous commit. Migrations are not reversed automatically.
+- Claude must never approve the environment, run the production steps by hand, or set `BUDGET_ALLOW_REMOTE_DB`.
+
+### One-time setup (owner; none of it is in the repo)
+1. Give the CI service principal (the identity behind the `AZURE_CREDENTIALS` secret) access to the production database. Azure SQL here is Azure AD-only, so ARM roles are not enough; connect to the production database as the SQL Azure AD admin (for example the portal query editor) and run:
+   ```sql
+   CREATE USER [<ci-service-principal-display-name>] FROM EXTERNAL PROVIDER;
+   ALTER ROLE db_datareader ADD MEMBER [<ci-service-principal-display-name>];
+   ALTER ROLE db_datawriter ADD MEMBER [<ci-service-principal-display-name>];
+   ALTER ROLE db_ddladmin ADD MEMBER [<ci-service-principal-display-name>];
+   ```
+2. Add the repository secret `PROD_DB_CONNECTION_STRING`: server, database, `Authentication=Active Directory Default;Encrypt=True`, and no password.
+3. Create the GitHub environment `production-migrations` with required reviewers (the owner). If you are the only reviewer, allow self-review. Without required reviewers the job runs without approval.
+4. Verify the first time with a real migration; the production path has not been run yet.
 
 ## Future
-Phase 2 in the design doc: CI proves migrations on a fresh container DB and the deploy workflow applies the idempotent script behind the `production` environment approval.
+Optional: a pre-migration database copy for risky changes (Basic tier supports `az sql db copy`).

@@ -54,7 +54,7 @@ Goal: let Claude (and the owner) change, test and ship this app quickly without 
 2. PR CI workflow, `.editorconfig`/analyzers, `npm ci`, branch protection (owner action).
 3. API integration test harness with a first few tests; CI runs them and applies migrations to a fresh DB.
 4. UI Vitest harness with a first few tests.
-5. Migration step in deploy (phase 2) and post-deploy smoke check.
+5. Migration step in deploy (phase 2, approval-gated) and post-deploy smoke check. Implemented; needs the one-time setup in `docs/migrations.md`.
 6. UI dedupe/refactor under test cover, then features.
 
 ## Facts checked (read-only, 2026-11-26)
