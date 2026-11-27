@@ -39,7 +39,7 @@ Goal: let Claude (and the owner) change, test and ship this app quickly without 
 - C# style: add `.editorconfig` and enable analyzers, starting at warnings so the baseline can be cleaned in one PR. TypeScript linting already exists; tighten rules as the UI is refactored.
 
 ## 4. Tests
-- **API integration tests first**: xUnit + `WebApplicationFactory` against a real SQL Server (Testcontainers, so option 1A) applying the real migrations. Highest value, because the API is thin CRUD plus summary/budget/template queries.
+- **API integration tests first** (done): xunit v3 + `WebApplicationFactory` against a real SQL Server applying the real migrations. Implemented without Testcontainers: tests take the server from `ConnectionStrings__BudgetDbConnection` (local dev container via `scripts/test-api.zsh`, a plain `docker run` in CI) and create/drop a uniquely named database per run. This avoids Podman-socket setup for Testcontainers. Highest value, because the API is thin CRUD plus summary/budget/template queries.
 - **UI unit tests**: Vitest for pure logic (query cache helpers in `Queries.ts`, colour and date helpers). Component tests after that. A Playwright smoke test is a later step.
 - Tests must be written before the Expenses/Incomes dedupe so the refactor has a safety net.
 - Never commit real financial data; fixtures are synthetic.

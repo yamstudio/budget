@@ -23,12 +23,12 @@ Personal budgeting web app (expenses, incomes, monthly comparison and year-to-da
 - Design and rollout plan: `docs/repo-hardening-design.md`.
 
 ## Commands
-Verified (2026-11-26, WSL2 Arch): `dotnet build -warnaserror`, `dotnet format --verify-no-changes` (`dotnet format` to fix), in `src/UI`: `npm ci`, `npx tsc --noEmit`, `npm run lint`, `npx prettier --check .`, `npm run build`, `scripts/dev-db.zsh up|down|reset|status`, `scripts/dev-api.zsh` (API on http://localhost:5054, auto-migrates and seeds synthetic data, swagger at `/swagger`). First `up` pulls a large image and starts slowly.
+Verified (2026-11-26, WSL2 Arch): `dotnet build -warnaserror`, `dotnet format --verify-no-changes` (`dotnet format` to fix), in `src/UI`: `npm ci`, `npx tsc --noEmit`, `npm run lint`, `npx prettier --check .`, `npm run build`, `scripts/dev-db.zsh up|down|reset|status`, `scripts/test-api.zsh` (API integration tests, 8 passing; creates and drops its own database on the local dev server), `scripts/dev-api.zsh` (API on http://localhost:5054, auto-migrates and seeds synthetic data, swagger at `/swagger`). First `up` pulls a large image and starts slowly.
 Unverified:
 - UI dev server: `cd src/UI && npm start` (Vite proxies `/api` to localhost:5054); the UI against the local API has not been exercised.
 - Regenerate client: `npm run genclient` in `src/UI`. It reads `src/UI/swagger/swagger.json` (gitignored), so first save the running API's Swagger JSON there. Unverified.
 - EF migrations: `dotnet ef` (not verified that the tool is installed).
-- Tests: **none exist** in either project.
+- UI tests: none exist yet.
 
 ## Roadmap (owner's stated direction, in rough order)
 1. Raise UI code quality (see below), alongside any feature touching that code.
@@ -45,6 +45,12 @@ The owner was an Angular dev when writing the UI; much of it was copy-pasted bet
 - When touching a file, leave it cleaner (dedupe, types, naming, lint). Keep refactors scoped to the feature at hand, in separate commits from behavior changes where practical.
 - Add tests for new logic (UI: Vitest + Testing Library would fit Vite; API: xUnit). Neither is set up yet; ask before choosing.
 
+## Testing
+- Run API tests: `scripts/test-api.zsh` (starts the local DB if needed). Add tests for any API change; follow `tests/WebApi.Tests/ExpenseApiTests.cs` (each test owns its data: unique lookup rows and its own date range).
+- The tests read the server from `ConnectionStrings__BudgetDbConnection` and replace only the database name; `LocalDatabaseGuard` still blocks non-local servers. In CI a throwaway SQL Server container is started with a runtime-generated password.
+- `dotnet publish` must target `src/WebApi` (the solution now has a test project).
+- Known quirk pinned down in tests by working around it: `PUT /api/expenses/{id}` returns the request body, not the stored row.
+
 ## Conventions
 - Use zsh for any shell scripts.
 - Prettier config in `src/UI/package.json` (no semicolons, single quotes, width 140); keep UI code formatted and lint-clean.
@@ -55,7 +61,8 @@ The owner was an Angular dev when writing the UI; much of it was copy-pasted bet
 Branch off `master`, open a PR, squash-merge (confirmed; commit titles end with `(#N)`). Pushing to `master` triggers a production deploy, so don't merge without the user's say-so. Commit messages: short imperative summary.
 
 ## Known deficiencies / risks
-- No automated tests yet. CI (`.github/workflows/ci.yml`, required before deploy and on PRs) runs build with `-warnaserror` (includes the NuGet vulnerability audit), `dotnet format --verify-no-changes`, `tsc`, eslint, prettier check and the UI build. Branch protection making it required for merging is a GitHub setting owned by the owner (verify it is on).
+- API has integration tests (`tests/WebApi.Tests`, xunit v3 on Microsoft.Testing.Platform, opted in via `global.json`): the real API against real SQL Server with the real migrations, one fresh database per run. They cover migrations applying cleanly, no missing migration for model changes, and expense CRUD/summary/templates. Everything else (other controllers, budget, income) and the whole UI are untested.
+- CI (`.github/workflows/ci.yml`, required before deploy and on PRs) runs build with `-warnaserror` (includes the NuGet vulnerability audit), `dotnet format --verify-no-changes`, `tsc`, eslint, prettier check and the UI build. Branch protection making it required for merging is a GitHub setting owned by the owner (verify it is on).
 - ESLint has 6 existing warnings (state set in effects, missing hook deps, deprecated React 19 patterns in `Expenses.tsx`, `Incomes.tsx` and others). `npm run lint` is a ratchet: `--max-warnings 6`. Lower the number as they are fixed; never raise it.
 - Dependencies are bleeding edge on purpose (owner prefers newest that works: net10, TypeScript 6, ESLint 10, Vite 8, node 26) and bumped frequently with few tests to catch breakage. EF Core 11 exists but needs .NET 11; stay on the latest 10.x patch until moving the TFM.
 - `src/UI/README.md` is stale Create React App boilerplate (mentions yarn); root README is two lines. Both should be replaced.

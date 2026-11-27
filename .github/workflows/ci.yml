@@ -24,6 +24,20 @@ jobs:
         run: dotnet build --configuration Release -warnaserror
       - name: Check formatting
         run: dotnet format --verify-no-changes
+      - name: Start a throwaway SQL Server for the integration tests
+        run: |
+          pw="$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9')aA1!"
+          echo "::add-mask::$pw"
+          docker run -d --name sql -p 127.0.0.1:1433:1433 \
+            -e ACCEPT_EULA=Y -e MSSQL_SA_PASSWORD="$pw" mcr.microsoft.com/mssql/server:2022-latest
+          echo "ConnectionStrings__BudgetDbConnection=Server=127.0.0.1,1433;Database=Budget;User Id=sa;Password=$pw;TrustServerCertificate=True" >> "$GITHUB_ENV"
+          for i in {1..90}; do
+            if [[ "$(docker logs sql 2>&1)" == *"ready for client connections"* ]]; then exit 0; fi
+            sleep 2
+          done
+          docker logs sql; exit 1
+      - name: API integration tests (real SQL Server, real migrations)
+        run: dotnet test --project tests/WebApi.Tests --configuration Release
 
   ui:
     runs-on: ubuntu-latest
