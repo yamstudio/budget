@@ -29,7 +29,7 @@ resource "azurerm_windows_web_app" "belfastweb" {
   https_only                                     = true
   client_affinity_enabled                        = true
   ftp_publish_basic_authentication_enabled       = false
-  webdeploy_publish_basic_authentication_enabled = true
+  webdeploy_publish_basic_authentication_enabled = false
 
   # System-assigned: the app signs in to SQL as itself. User-assigned: the sign-in credential (and only that).
   identity {
