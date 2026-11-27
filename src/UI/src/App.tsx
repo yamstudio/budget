@@ -95,9 +95,9 @@ const App = () => {
 
   return (
     <Flex>
-      <Layout style={{ height: '100vh', display: 'flex' }}>
+      <Layout style={{ height: '100vh', display: 'flex', width: '100%', minWidth: 0 }}>
         <AppHeader />
-        <Content style={{ flex: 1, display: 'flex' }}>
+        <Content style={{ flex: 1, display: 'flex', minWidth: 0 }}>
           <Routes>
             <Route path="/" element={<AppContext />}>
               <Route path="expenses" element={<Expenses fromDate={fromDate} toDate={toDate} />} />
