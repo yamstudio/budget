@@ -4,3 +4,10 @@ artifact/
 # build output (any project)
 **/bin/
 **/obj/
+
+# Terraform
+infra/.terraform/
+infra/*.tfstate*
+infra/*.tfvars
+infra/crash.log
+infra/backend.hcl
