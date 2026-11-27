@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { BreakdownRow } from '../gensrc/Api'
+import type { BreakdownRow, BudgetComparisonRow } from '../gensrc/Api'
 import {
   FROM_SAVINGS,
   INCOME_HUB,
@@ -8,6 +8,8 @@ import {
   OTHER_COLOR,
   OTHER_LABEL,
   PALETTE,
+  budgetLabel,
+  budgetOption,
   buildFlow,
   colorMap,
   topWithOther,
@@ -106,5 +108,34 @@ describe('trendsOption', () => {
     const series = option.series as { name: string; data: number[] }[]
     expect(series.find((s) => s.name === 'a')!.data).toEqual([10, 0, 5, 0])
     expect(series.find((s) => s.name === OTHER_LABEL)!.data).toEqual([0, 8, 0, 0])
+  })
+})
+
+describe('budgetLabel', () => {
+  it('shows the percent of budget used, including overspending', () => {
+    expect(budgetLabel({ budget: 1200, actual: 1432 })).toBe('$1,432 of $1,200 (119%)')
+    expect(budgetLabel({ budget: 400, actual: 100 })).toBe('$100 of $400 (25%)')
+  })
+
+  it('does not divide by a missing budget', () => {
+    expect(budgetLabel({ budget: 0, actual: 40 })).toBe('$40, no budget')
+  })
+})
+
+describe('budgetOption', () => {
+  const rows: BudgetComparisonRow[] = [
+    { key: 1, label: 'Small', budget: 100, actual: 10 },
+    { key: 2, label: 'Big', budget: 50, actual: 300 },
+    { key: 3, label: 'Unspent', budget: 80, actual: 0 },
+  ]
+
+  it('lists the largest spender first (top of the chart) with budget and actual series aligned to it', () => {
+    const option = budgetOption(rows)
+    const labels = (option.yAxis as { data: string[] }).data
+    expect([...labels].reverse()).toEqual(['Big', 'Small', 'Unspent'])
+    const [budget, actual] = option.series as { name: string; data: number[] }[]
+    expect([budget.name, actual.name]).toEqual(['Budget', 'Actual'])
+    expect([...budget.data].reverse()).toEqual([50, 100, 80])
+    expect([...actual.data].reverse()).toEqual([300, 10, 0])
   })
 })

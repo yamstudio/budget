@@ -1,7 +1,7 @@
 import { addMonths, format, parseISO, startOfMonth, startOfYear } from 'date-fns'
 import { ExpenseGrouping, ExpenseNecessity } from '../gensrc/Api'
 
-export const VIEWS = ['breakdown', 'flow', 'trends'] as const
+export const VIEWS = ['breakdown', 'flow', 'trends', 'budget'] as const
 export type InsightsView = (typeof VIEWS)[number]
 
 export const RANGES = ['3m', '6m', '12m', 'ytd', 'custom'] as const

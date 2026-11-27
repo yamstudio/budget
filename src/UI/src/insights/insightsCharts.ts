@@ -1,6 +1,6 @@
 import { eachMonthOfInterval, format } from 'date-fns'
 import type { EChartsOption } from 'echarts'
-import type { BreakdownRow } from '../gensrc/Api'
+import type { BreakdownRow, BudgetComparisonRow } from '../gensrc/Api'
 
 /** Validated categorical palette (light surface), fixed order. */
 export const PALETTE = ['#257de0', '#f47230', '#00b894', '#f2a600', '#ee7fac', '#008a17', '#6a4ce2', '#ec4647']
@@ -183,3 +183,63 @@ export const flowOption = (flow: Flow, narrow: boolean): EChartsOption => ({
 
 /** Height that keeps the tallest side of the flow readable. */
 export const flowHeight = (flow: Flow) => Math.max(260, Math.max(flow.nodes.length, 1) * 30)
+
+export const BUDGET_COLOR = '#c9c9c9'
+
+/** "$1,432 of $1,200 (119%)", or just the amount when there is no budget for the category. */
+export const budgetLabel = (row: Pick<BudgetComparisonRow, 'budget' | 'actual'>) =>
+  row.budget > 0
+    ? `${formatMoney(row.actual)} of ${formatMoney(row.budget)} (${Math.round((row.actual / row.budget) * 100)}%)`
+    : `${formatMoney(row.actual)}, no budget`
+
+/** Per category: a gray budget bar above a blue actual bar, so overspending shows as the blue bar outrunning the gray one. */
+export const budgetOption = (rows: BudgetComparisonRow[], narrow = false): EChartsOption => {
+  const named = rows.map((r) => ({ ...r, label: r.label ?? `#${r.key}` }))
+  const shown = named.sort((a, b) => b.actual - a.actual || a.label.localeCompare(b.label)).reverse() // category axes draw bottom-up
+  return {
+    animation: false,
+    grid: { left: 8, right: 8, top: 8, bottom: 32, containLabel: true },
+    legend: { bottom: 0, textStyle: { color: TEXT } },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (v) => formatMoney(Number(v)) },
+    xAxis: {
+      type: 'value',
+      // Headroom so the label at the end of the longest bar is not cut off (more is needed on a narrow screen).
+      max: (v) => v.max * (narrow ? 1.9 : 1.35),
+      axisLabel: { color: TEXT, formatter: (v: number) => compact.format(v) },
+      splitLine: { lineStyle: { color: GRID } },
+    },
+    yAxis: {
+      type: 'category',
+      data: shown.map((r) => r.label),
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: TEXT, width: 100, overflow: 'truncate' },
+    },
+    series: [
+      {
+        name: 'Budget',
+        type: 'bar',
+        barMaxWidth: 14,
+        barGap: '10%',
+        itemStyle: { color: BUDGET_COLOR, borderRadius: [0, 4, 4, 0] },
+        data: shown.map((r) => r.budget),
+      },
+      {
+        name: 'Actual',
+        type: 'bar',
+        barMaxWidth: 14,
+        itemStyle: { color: PALETTE[0], borderRadius: [0, 4, 4, 0] },
+        data: shown.map((r) => r.actual),
+        label: {
+          show: true,
+          position: 'right',
+          color: TEXT,
+          fontSize: 11,
+          formatter: (p) => budgetLabel(shown[p.dataIndex]),
+        },
+      },
+    ],
+  }
+}
+
+export const budgetHeight = (count: number) => Math.max(200, count * 56 + 48)

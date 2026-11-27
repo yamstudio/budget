@@ -162,8 +162,10 @@ export const useExpenseSummary = (fromDate: Date, toDate: Date) =>
         })
         .then(({ data }) => data),
   })
-const invalidateBreakdowns = (queryClient: QueryClient, kind: 'expenseBreakdown' | 'incomeBreakdown') =>
-  queryClient.invalidateQueries({ queryKey: [kind] })
+const invalidateBreakdowns = (queryClient: QueryClient, kind: 'expenseBreakdown' | 'incomeBreakdown') => {
+  if (kind === 'expenseBreakdown') queryClient.invalidateQueries({ queryKey: ['budgetComparison'] })
+  return queryClient.invalidateQueries({ queryKey: [kind] })
+}
 
 const invalidateExpenseSummary = (queryClient: QueryClient, date: string) => {
   invalidateBreakdowns(queryClient, 'expenseBreakdown')
@@ -249,6 +251,7 @@ export const useUpdateExpenseCategory = (queryClient: QueryClient) =>
   })
 
 export type ExpenseBreakdownQuery = Parameters<typeof api.getExpenseBreakdown>[0]
+export type BudgetComparisonQuery = Parameters<typeof api.getBudgetComparison>[0]
 export type IncomeBreakdownQuery = Parameters<typeof api.getIncomeBreakdown>[0]
 
 export const useExpenseBreakdown = (query: ExpenseBreakdownQuery, enabled = true) =>
@@ -265,4 +268,12 @@ export const useIncomeBreakdown = (query: IncomeBreakdownQuery, enabled = true) 
     queryKey: ['incomeBreakdown', query],
     staleTime: 300_000,
     queryFn: () => api.getIncomeBreakdown(query).then(({ data }) => data),
+  })
+
+export const useBudgetComparison = (query: BudgetComparisonQuery, enabled = true) =>
+  useQuery({
+    enabled,
+    queryKey: ['budgetComparison', query],
+    staleTime: 300_000,
+    queryFn: () => api.getBudgetComparison(query).then(({ data }) => data),
   })
