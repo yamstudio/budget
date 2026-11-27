@@ -84,7 +84,7 @@ resource "azuread_application_federated_identity_credential" "ci" {
 
 # belfast-migrate opens and closes its own temporary SQL firewall rule for the runner (see
 # .github/actions/prod-sql) and nothing else on the server. Tighter than the built-in "SQL Server
-# Contributor". The server is shared with another app, so this applies server-wide: an accepted overlap.
+# Contributor". The server is shared with other projects, so this applies server-wide: an accepted overlap.
 resource "azurerm_role_definition" "sql_firewall_rule_writer" {
   name        = "belfast-sql-firewall-rule-writer"
   scope       = data.azurerm_mssql_server.sql.id

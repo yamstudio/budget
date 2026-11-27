@@ -118,7 +118,7 @@ resource "azurerm_windows_web_app" "belfastweb" {
   }
 }
 
-# --- SQL (shared server: `sync` is a tenant with its own `library` database) -----------
+# --- SQL (shared server: other, non-public projects keep their own databases on it) -----
 
 resource "azurerm_mssql_server" "sql" {
   name                = var.sql_server_name

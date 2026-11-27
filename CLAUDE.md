@@ -29,6 +29,7 @@ The engineering foundation is done and proven end to end (local DB + prod guard,
 - Never run the API, tests, `dotnet ef`, or any script against a non-local database. `LocalDatabaseGuard` enforces this at startup (only Azure App Service or `BUDGET_ALLOW_REMOTE_DB=1` bypasses it). Never set that variable yourself.
 - Never apply migrations to production, approve the `production-migrations` environment, create a tag/release, run the deploy workflow, merge to `master`, or touch CI/infra/secrets without the owner's explicit say-so. Production migrations run from CI after owner approval; procedure and rollback: `docs/migrations.md`.
 - Never print or commit connection strings, even the local one. Never commit real financial data.
+- This repo is public and the owner's other projects are not. Never write the names of those projects, their repos, databases, resource groups or other resources into any committed file, workflow, PR title/body or commit message (the existence of a project or database is itself private). Say "other, non-public projects". Same for the SQL server, resource group and state account names.
 - Design and rollout plan: `docs/repo-hardening-design.md`.
 
 ## Commands

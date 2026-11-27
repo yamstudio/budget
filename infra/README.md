@@ -7,7 +7,7 @@ Two layers, two state files, two appliers. **Read `docs/identities.md` first.**
 | `infra/` | web app, its plan, the shared SQL server, the `budget` database, the Azure-services firewall rule | CI as `belfast-infra`, after approval (not wired up yet) | `budget.tfstate` |
 | `infra/identity/` | the four CI identities, their GitHub OIDC trust and Azure roles, and "assignment required" on the Entra sign-in app | the owner, from a laptop | `identity.tfstate` |
 
-Resource groups are created by hand and only read here. The `sync` app shares the SQL server but owns nothing here.
+Resource groups are created by hand and only read here. Other, non-public projects share the SQL server and own nothing here.
 
 **This repo is public.** Environment-specific names and IDs (subscription, tenant, resource groups, SQL server, state
 storage) live in gitignored files in each layer, never in `.tf`:

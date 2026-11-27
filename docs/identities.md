@@ -69,9 +69,9 @@ A workflow job needs `permissions: { id-token: write, contents: read }` to reque
 
 Consequences worth remembering:
 - `deploy` cannot alter the schema, and `migrate` cannot ship code.
-- Nothing can touch the `library` database, which belongs to another app (`sync`).
-- The SQL server is **shared** with that app, so `migrate`'s firewall right is server-wide. Accepted until `sync`
-  moves to its own server.
+- Nothing here can touch the server's other databases (they belong to other, non-public projects).
+- The SQL server is **shared** with those projects, so `migrate`'s firewall right is server-wide. Accepted until
+  they move to their own server.
 - `plan` runs on pull requests from any same-repo branch, so it must stay read-only.
 
 ## Manual steps (Terraform cannot do these), in order
@@ -98,7 +98,7 @@ Consequences worth remembering:
 ## Do not
 
 - **Delete or edit `GitHub-Automation`.** It is the *old* shared identity, also used by other projects (it has rights
-  on another resource group, and probably on the shared server for the `sync` app). This repo stops using it; deleting
+  on other resource groups and on the shared server). This repo stops using it; deleting
   it is a separate decision for after those projects have moved. Its current client secret expires **2026-12-22**.
 - **Rename `Belfast Web Role Account`.** It is the Entra app behind the web app's login page, not a CI identity.
 - **Make a CI identity able to apply `infra/identity/`.** See the rule above.
