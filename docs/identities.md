@@ -42,8 +42,8 @@ ability "to save a manual step": a compromised pipeline could then grant itself 
      issuer   token.actions.githubusercontent.com
      subject  repo:<owner>/budget:environment:production-migrations     <- set by GitHub, not by the workflow
      audience api://AzureADTokenExchange
-2. azure/login sends it to Entra: "I am app <belfast-migrate client id>". (client, tenant and subscription ids are
-   plain GitHub *variables*, not secrets)
+2. azure/login sends it to Entra: "I am app <belfast-migrate client id>". (the client id is a plain GitHub *variable*; tenant and
+   subscription ids come from the masked `TF_VARS`)
 3. Entra checks the signature against GitHub's public keys AND that belfast-migrate has a federated credential whose
    issuer + subject + audience match exactly. If not: login fails.
 4. Entra returns a normal Azure access token for belfast-migrate, valid about an hour. Later steps use it.
@@ -104,11 +104,11 @@ Never put a secret in an app setting: Terraform shows and stores whatever a sett
 |---|---|---|---|
 | secret | `TF_VARS` | repository | contents of `infra/terraform.tfvars` |
 | secret | `TF_BACKEND` | repository | contents of `infra/backend.hcl` |
-| variable | `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` | repository | plain ids |
 | variable | `AZURE_CLIENT_ID_PLAN` | repository | client id of `belfast-plan` (PR jobs have no environment) |
 | variable | `AZURE_CLIENT_ID` | environments `production` (deploy), `production-migrations` (migrate), `production-infra` (infra) | client id of that identity |
 
-The two secrets are identifiers, not credentials. `.github/actions/tf-config` writes them to the files Terraform expects,
+The two secrets are identifiers, not credentials. Tenant and subscription ids deliberately are **not** GitHub variables: variables are
+printed in plain text in the public logs, so `tf-config` derives them from `TF_VARS` (masked) instead. Client ids are fine as variables. `.github/actions/tf-config` writes them to the files Terraform expects,
 masks every value in the logs *before* anything can print it, and derives the passwordless connection string and resource
 group for the migration jobs. Fork PRs get no secrets or OIDC token and are skipped. After changing a local `tfvars` or
 `backend.hcl`, update the matching secret (for example `gh secret set TF_VARS < infra/terraform.tfvars`).
