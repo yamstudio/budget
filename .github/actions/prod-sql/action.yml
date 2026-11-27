@@ -33,6 +33,17 @@ runs:
         echo "::add-mask::$server"
         rule="gh-actions-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
 
+        # Runs an az command; on failure prints a generic message only (az errors can contain subscription
+        # and resource identifiers, and the logs are public). Stdout is returned on success.
+        az_safe() {
+          local out
+          if ! out="$("$@" 2>&1)"; then
+            echo "Azure CLI call failed (${*:2:3}); its output is withheld because it can contain subscription and resource identifiers." >&2
+            return 1
+          fi
+          printf '%s' "$out"
+        }
+
         # Classifies EF output into a safe, generic reason. Returns 0 when the database was read.
         classify() {
           local out="$1"
@@ -50,14 +61,22 @@ runs:
           open)
             ip="$(curl -fsS --max-time 20 https://api.ipify.org)"
             echo "::add-mask::$ip"
-            az sql server firewall-rule create --resource-group "$RG" --server "$server" --name "$rule" \
-              --start-ip-address "$ip" --end-ip-address "$ip" --output none
+            az_safe az sql server firewall-rule create --resource-group "$RG" --server "$server" --name "$rule" \
+              --start-ip-address "$ip" --end-ip-address "$ip" --output none > /dev/null
             echo "Opened a temporary firewall rule for this runner."
             ;;
           close)
-            az sql server firewall-rule delete --resource-group "$RG" --server "$server" --name "$rule" --yes --output none \
-              || echo "No firewall rule to remove (it was never opened)."
-            echo "Temporary firewall rule closed."
+            # List first (a failure here fails the step), delete only if the rule exists (a failure there
+            # fails the step too), then prove it is gone. Never swallow errors: a leftover rule is a leak.
+            names="$(az_safe az sql server firewall-rule list --resource-group "$RG" --server "$server" --query "[].name" --output tsv)"
+            if grep -qxF "$rule" <<< "$names"; then
+              az_safe az sql server firewall-rule delete --resource-group "$RG" --server "$server" --name "$rule" --output none > /dev/null
+              names="$(az_safe az sql server firewall-rule list --resource-group "$RG" --server "$server" --query "[].name" --output tsv)"
+              if grep -qxF "$rule" <<< "$names"; then echo "Temporary firewall rule is STILL present after delete."; exit 1; fi
+              echo "Temporary firewall rule closed."
+            else
+              echo "No firewall rule to remove (it was never opened)."
+            fi
             ;;
           wait)
             dotnet tool restore > /dev/null
