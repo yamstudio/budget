@@ -163,3 +163,37 @@ resource "azurerm_mssql_firewall_rule" "allow_azure_services" {
   start_ip_address = "0.0.0.0"
   end_ip_address   = "0.0.0.0"
 }
+
+# --- This app's own SQL server (replaces the shared one above) --------------------------------------
+# Step 1 of moving off the shared server: create it empty, unused. Later steps copy the database over, switch
+# the app's connection string, and forget the old resources above. See docs/identities.md and infra/README.md.
+
+resource "azurerm_mssql_server" "budget" {
+  name                = var.new_sql_server_name
+  resource_group_name = data.azurerm_resource_group.web.name
+  location            = data.azurerm_resource_group.web.location
+  version             = "12.0"
+
+  minimum_tls_version           = "1.2"
+  public_network_access_enabled = true
+
+  azuread_administrator {
+    login_username              = var.sql_admin_login
+    object_id                   = var.sql_admin_object_id
+    tenant_id                   = var.tenant_id
+    azuread_authentication_only = true
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+# Lets Azure services (the web app) reach the server. Client-IP rules and the per-run CI rule are
+# intentionally not declared here.
+resource "azurerm_mssql_firewall_rule" "budget_allow_azure_services" {
+  name             = "AllowAllWindowsAzureIps"
+  server_id        = azurerm_mssql_server.budget.id
+  start_ip_address = "0.0.0.0"
+  end_ip_address   = "0.0.0.0"
+}
