@@ -52,6 +52,8 @@ jobs:
           cache: npm
           cache-dependency-path: src/UI/package-lock.json
       - run: npm ci
+      - name: Audit production dependencies (high severity and up)
+        run: npm audit --omit=dev --audit-level=high
       - name: Typecheck
         run: npx tsc --noEmit
       - name: Lint

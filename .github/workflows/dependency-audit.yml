@@ -1,0 +1,40 @@
+name: Dependency audit
+
+# Weekly full audit (including dev tooling and transitive NuGet packages). It fails loudly instead of
+# blocking deploys; the per-PR gates in ci.yml cover production npm dependencies and NuGet.
+on:
+  schedule:
+    - cron: '17 14 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  NODE_VERSION: '26.x'
+
+jobs:
+  npm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: npm --prefix src/UI ci
+      - name: Audit all npm dependencies
+        run: npm --prefix src/UI audit
+
+  nuget:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Audit NuGet packages (including transitive)
+        run: |
+          out="$(dotnet list package --vulnerable --include-transitive 2>&1)"
+          echo "$out"
+          if [[ "$out" == *"has the following vulnerable packages"* ]]; then exit 1; fi

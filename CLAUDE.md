@@ -70,4 +70,4 @@ Branch off `master`, open a PR, squash-merge (confirmed; commit titles end with 
 - Controllers are repetitive per-entity CRUD (not audited in depth; validation and error handling not yet reviewed).
 - Deploy workflow runs ARM deployment on every push to `master` (after checks pass).
 - The generated API client depends on a gitignored swagger file, so regenerating is a manual step easily forgotten after API changes.
-- `npm audit` reports 20 vulnerabilities (10 moderate, 10 high; includes vite dev-server advisories and zod) in the UI dependency tree as of 2026-11-26. Not yet fixed or gated in CI; try `npm audit fix` in its own PR.
+- Dependency advisories: `npm audit` was cleaned to 0 on 2026-11-26 (`npm audit fix`, lockfile only). PR CI fails on high-severity advisories in production npm dependencies (`npm audit --omit=dev --audit-level=high`) and on any NuGet advisory (via `-warnaserror`). `dependency-audit.yml` runs weekly (Mondays) over everything including dev tooling. A new advisory can therefore block a deploy until dependencies are bumped; fix with `npm audit fix` or a package bump rather than loosening the gate.
