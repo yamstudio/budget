@@ -9,6 +9,7 @@ const api = vi.hoisted(() => ({
   updateExpense: vi.fn(),
   deleteExpense: vi.fn(),
   createVendor: vi.fn(),
+  createIncome: vi.fn(),
 }))
 vi.mock('./gensrc/Api', () => ({
   Api: class {
@@ -16,12 +17,16 @@ vi.mock('./gensrc/Api', () => ({
   },
 }))
 
-const { useCreateExpense, useCreateVendor, useDeleteExpense, useUpdateExpense } = await import('./Queries')
+const { useCreateExpense, useCreateIncome, useCreateVendor, useDeleteExpense, useUpdateExpense } = await import('./Queries')
 
 const JAN = ['expenses', '2025-01-01', '2025-01-31']
 const FEB = ['expenses', '2025-02-01', '2025-02-28']
-const JAN_SUMMARY = ['expenseSummary', '2025-01-01', '2025-01-31']
-const FEB_SUMMARY = ['expenseSummary', '2025-02-01', '2025-02-28']
+// Insights caches: any expense edit can change expense and budget figures; only income edits change income figures.
+const EXPENSE_INSIGHTS = [
+  ['expenseBreakdown', { groupBy: 'Category' }],
+  ['budgetComparison', { fromDate: '2025-01-01' }],
+]
+const INCOME_INSIGHTS = [['incomeBreakdown', { groupBy: 'Source' }]]
 
 const expense = (expenseID: number, date: string, amount = 10): Expense => ({
   expenseID,
@@ -40,14 +45,15 @@ beforeEach(() => {
   queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   queryClient.setQueryData(JAN, [expense(1, '2025-01-05'), expense(2, '2025-01-20')])
   queryClient.setQueryData(FEB, [expense(3, '2025-02-10')])
-  queryClient.setQueryData(JAN_SUMMARY, { periods: [] })
-  queryClient.setQueryData(FEB_SUMMARY, { periods: [] })
+  for (const key of [...EXPENSE_INSIGHTS, ...INCOME_INSIGHTS]) queryClient.setQueryData(key, [])
 })
 
-const isInvalidated = (key: string[]) => queryClient.getQueryState(key)?.isInvalidated
+const isInvalidated = (key: unknown[]) => queryClient.getQueryState(key)?.isInvalidated
+const expenseInsightsInvalidated = () => EXPENSE_INSIGHTS.map(isInvalidated)
+const incomeInsightsInvalidated = () => INCOME_INSIGHTS.map(isInvalidated)
 
 describe('expense mutations keep cached date ranges in sync', () => {
-  it('create appends to the cached range containing the date and invalidates only that summary', async () => {
+  it('create appends to the cached range containing the date and invalidates expense insights, not income insights', async () => {
     const created = expense(4, '2025-01-15')
     api.createExpense.mockResolvedValue({ data: created })
     const { result } = renderHook(() => useCreateExpense(queryClient), { wrapper })
@@ -56,8 +62,8 @@ describe('expense mutations keep cached date ranges in sync', () => {
 
     expect(queryClient.getQueryData<Expense[]>(JAN)?.map((e) => e.expenseID)).toEqual([1, 2, 4])
     expect(queryClient.getQueryData<Expense[]>(FEB)?.map((e) => e.expenseID)).toEqual([3])
-    expect(isInvalidated(JAN_SUMMARY)).toBe(true)
-    expect(isInvalidated(FEB_SUMMARY)).toBe(false)
+    expect(expenseInsightsInvalidated()).toEqual([true, true])
+    expect(incomeInsightsInvalidated()).toEqual([false])
   })
 
   it('create on a range boundary date is included in the range (inclusive)', async () => {
@@ -80,7 +86,7 @@ describe('expense mutations keep cached date ranges in sync', () => {
     const jan = queryClient.getQueryData<Expense[]>(JAN)!
     expect(jan.find((e) => e.expenseID === 2)?.amount).toBe(99)
     expect(jan.find((e) => e.expenseID === 1)?.amount).toBe(10)
-    expect(isInvalidated(JAN_SUMMARY)).toBe(true)
+    expect(expenseInsightsInvalidated()).toEqual([true, true])
   })
 
   it('delete removes the row from the cache', async () => {
@@ -90,8 +96,8 @@ describe('expense mutations keep cached date ranges in sync', () => {
     await act(() => result.current.mutateAsync(1))
 
     expect(queryClient.getQueryData<Expense[]>(JAN)?.map((e) => e.expenseID)).toEqual([2])
-    expect(isInvalidated(JAN_SUMMARY)).toBe(true)
-    expect(isInvalidated(FEB_SUMMARY)).toBe(false)
+    expect(expenseInsightsInvalidated()).toEqual([true, true])
+    expect(incomeInsightsInvalidated()).toEqual([false])
   })
 
   it('a failed create leaves the cache untouched', async () => {
@@ -103,7 +109,20 @@ describe('expense mutations keep cached date ranges in sync', () => {
     })
 
     expect(queryClient.getQueryData<Expense[]>(JAN)).toHaveLength(2)
-    expect(isInvalidated(JAN_SUMMARY)).toBe(false)
+    expect(expenseInsightsInvalidated()).toEqual([false, false])
+  })
+})
+
+describe('income mutations', () => {
+  it('create invalidates income insights, not expense insights', async () => {
+    const created = { incomeID: 1, incomeCategoryID: 1, incomeSourceID: 1, amount: 5, date: '2025-01-15' }
+    api.createIncome.mockResolvedValue({ data: created })
+    const { result } = renderHook(() => useCreateIncome(queryClient), { wrapper })
+
+    await act(() => result.current.mutateAsync({ ...created }))
+
+    expect(incomeInsightsInvalidated()).toEqual([true])
+    expect(expenseInsightsInvalidated()).toEqual([false, false])
   })
 })
 
