@@ -14,11 +14,11 @@ Read `docs/repo-hardening-design.md` for context. Never put connection strings, 
 4. Destructive changes (drop/rename column, narrowing a type) go in two releases: expand (add new, dual-write), then contract (remove old) in a later release.
 
 ## Applying to production (automated, with approval)
-Migrations are applied by `.github/workflows/deploy.yml` on pushes to `master` that change `src/WebApi/Migrations`:
+Migrations are applied by `.github/workflows/deploy.yml` when a release (see `docs/releasing.md`) changes `src/WebApi/Migrations` compared with the previous release tag:
 1. `plan-migrations` detects the change, generates the idempotent SQL (`dotnet ef migrations script --idempotent`) and prints it in the run summary for review.
 2. `migrate` waits for a required reviewer to approve the **production-migrations** GitHub environment, logs into Azure as the CI service principal, notes the restore point time, and runs `dotnet ef database update` against production with `BUDGET_ALLOW_REMOTE_DB=1` (the only sanctioned use of that override).
 3. `deploy` runs only after `migrate` succeeded or was not needed. After deploying it smoke-checks that the app answers (a redirect to sign-in counts as up).
-Pushes that do not touch migrations skip the approval gate entirely.
+Releases that do not touch migrations skip the approval gate entirely.
 
 CI also proves the exact `dotnet ef database update` command on a fresh database, twice (second run must be a no-op), on every PR.
 
