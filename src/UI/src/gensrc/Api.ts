@@ -101,21 +101,6 @@ export interface ExpenseCategory {
   necessity?: ExpenseNecessity
 }
 
-export interface ExpenseSummary {
-  periods: ExpenseSummaryPeriod[] | null
-}
-
-export interface ExpenseSummaryPeriod {
-  /** @format date */
-  fromDate: string
-  /** @format date */
-  toDate: string
-  /** @format double */
-  amount: number
-  /** @format int32 */
-  expenseCategoryID?: number | null
-}
-
 export interface ExpenseTemplate {
   /** @format int32 */
   expenseCategoryID?: number | null
@@ -559,31 +544,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<Expense, any>({
         path: `/api/expenses/${expenseId}`,
         method: 'DELETE',
-        format: 'json',
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ExpenseApi
-     * @name GetExpenseSummary
-     * @request GET:/api/expenses/summary
-     */
-    getExpenseSummary: (
-      query: {
-        /** @format date */
-        fromDate: string
-        /** @format date */
-        toDate: string
-        aggregateByExpenseCategory?: boolean
-      },
-      params: RequestParams = {}
-    ) =>
-      this.request<ExpenseSummary, any>({
-        path: `/api/expenses/summary`,
-        method: 'GET',
-        query: query,
         format: 'json',
         ...params,
       }),

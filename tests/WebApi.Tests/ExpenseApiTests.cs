@@ -81,41 +81,6 @@ public class ExpenseApiTests(ApiFixture api) : ApiTestBase(api)
     }
 
     [Fact]
-    public async Task Summary_sums_decimals_per_month_and_clips_to_the_requested_range()
-    {
-        var (catA, vendor, method) = await CreateLookupsAsync();
-        var (catB, _, _) = await CreateLookupsAsync();
-        await CreateExpenseAsync(catA, vendor, method, 7m, "2001-01-10");      // before the range: excluded
-        await CreateExpenseAsync(catA, vendor, method, 10.10m, "2001-01-20");
-        await CreateExpenseAsync(catB, vendor, method, 20.20m, "2001-01-25");
-        await CreateExpenseAsync(catA, vendor, method, 5.05m, "2001-02-03");
-
-        var total = await Client.GetFromJsonAsync<ExpenseSummary>(
-            "/api/expenses/summary?fromDate=2001-01-15&toDate=2001-02-20&aggregateByExpenseCategory=false");
-        var periods = total!.Periods.OrderBy(p => p.FromDate).ToList();
-        Assert.Collection(periods,
-            p =>
-            {
-                Assert.Equal(new DateOnly(2001, 1, 15), p.FromDate); // clipped to the requested start
-                Assert.Equal(new DateOnly(2001, 1, 31), p.ToDate);
-                Assert.Equal(30.30m, p.Amount);
-                Assert.Null(p.ExpenseCategoryID);
-            },
-            p =>
-            {
-                Assert.Equal(new DateOnly(2001, 2, 1), p.FromDate);
-                Assert.Equal(new DateOnly(2001, 2, 20), p.ToDate);  // clipped to the requested end
-                Assert.Equal(5.05m, p.Amount);
-            });
-
-        var byCategory = await Client.GetFromJsonAsync<ExpenseSummary>(
-            "/api/expenses/summary?fromDate=2001-01-15&toDate=2001-02-20&aggregateByExpenseCategory=true");
-        Assert.Equal(3, byCategory!.Periods.Count);
-        Assert.Equal(10.10m, byCategory.Periods.Single(p => p.ExpenseCategoryID == catA && p.FromDate.Month == 1).Amount);
-        Assert.Equal(20.20m, byCategory.Periods.Single(p => p.ExpenseCategoryID == catB).Amount);
-    }
-
-    [Fact]
     public async Task Templates_group_frequent_expenses_and_validate_parameters()
     {
         var (category, vendor, method) = await CreateLookupsAsync();
