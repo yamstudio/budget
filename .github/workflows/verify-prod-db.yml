@@ -31,6 +31,12 @@ jobs:
         env:
           PROD_DB_CONNECTION: ${{ secrets.PROD_DB_CONNECTION_STRING }}
           BUDGET_ALLOW_REMOTE_DB: '1'
+        shell: bash
         run: |
           dotnet tool restore
-          dotnet ef migrations list --project src/WebApi --connection "$PROD_DB_CONNECTION" | tee -a "$GITHUB_STEP_SUMMARY"
+          dotnet restore src/WebApi
+          # Capture first: a failing command inside $(...) fails the step (a pipe into tee would hide it).
+          out="$(dotnet ef migrations list --project src/WebApi --connection "$PROD_DB_CONNECTION")"
+          echo "$out" | tee -a "$GITHUB_STEP_SUMMARY"
+          # Prove we really read the migration history, not just that nothing crashed.
+          grep -q "InitialCreate" <<< "$out"
