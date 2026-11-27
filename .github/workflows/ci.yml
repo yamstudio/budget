@@ -1,0 +1,48 @@
+name: CI
+
+# Required checks. Runs on pull requests, and is reused by deploy.yml before any deploy.
+on:
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  NODE_VERSION: '26.x'
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Build (warnings are errors, includes NuGet vulnerability audit)
+        run: dotnet build --configuration Release -warnaserror
+      - name: Check formatting
+        run: dotnet format --verify-no-changes
+
+  ui:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/UI
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: src/UI/package-lock.json
+      - run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Lint
+        run: npm run lint
+      - name: Check formatting
+        run: npx prettier --check .
+      - name: Build
+        run: npm run build

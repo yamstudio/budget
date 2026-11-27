@@ -3,7 +3,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace YamStudio.Budget.WebApi.Models;
 
-public class IncomeSource {
+public class IncomeSource
+{
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int IncomeSourceID { get; set; }
     [StringLength(64)]

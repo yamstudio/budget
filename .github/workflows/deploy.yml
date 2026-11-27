@@ -4,7 +4,7 @@ env:
   AZURE_WEBAPP_NAME: belfastweb
   AZURE_WEBAPP_PACKAGE_PATH: '.'
   DOTNET_VERSION: '10.0.x'
-  NODE_VERSION: '25.x'
+  NODE_VERSION: '26.x'
 
 on:
   push:
@@ -12,7 +12,11 @@ on:
       - master
 
 jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
   build:
+    needs: checks
     runs-on: ubuntu-latest
 
     steps:
@@ -42,7 +46,7 @@ jobs:
         run: dotnet publish -c Release --property:PublishDir=${PWD}/artifact
       
       - name: Build UI
-        run: npm --prefix src/UI install && npm --prefix src/UI run build
+        run: npm --prefix src/UI ci && npm --prefix src/UI run build
 
       - name: Copy UI dist into artifact
         run: mkdir artifact/static && cp -r src/UI/dist/* artifact/static 
@@ -55,6 +59,7 @@ jobs:
           if-no-files-found: error
   
   arm-deploy:
+    needs: checks
     runs-on: ubuntu-latest
 
     steps:

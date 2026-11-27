@@ -3,7 +3,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace YamStudio.Budget.WebApi.Models;
 
-public class Vendor {
+public class Vendor
+{
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int VendorID { get; set; }
     [StringLength(64)]

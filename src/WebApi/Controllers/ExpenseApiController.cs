@@ -187,7 +187,7 @@ public class ExpenseApiController : ControllerBase
             .Where(g => g.Total > groupThreshold)
             .OrderByDescending(g => g.Total)
             .Take(maxResults)
-            .Select(g => 
+            .Select(g =>
                 new ExpenseTemplate
                 {
                     Amount = aggregateByAmount ? g.Amount : null,
