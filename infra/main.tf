@@ -3,6 +3,13 @@ data "azurerm_resource_group" "web" {
   name = var.web_resource_group
 }
 
+# Created by infra/identity (owner-applied). The web app proves itself to the Entra sign-in app with this identity
+# instead of a client secret; see docs/identities.md.
+data "azurerm_user_assigned_identity" "signin" {
+  name                = "belfast-web-signin"
+  resource_group_name = data.azurerm_resource_group.web.name
+}
+
 # --- Web app -----------------------------------------------------------------
 
 resource "azurerm_service_plan" "belfast" {
@@ -24,12 +31,18 @@ resource "azurerm_windows_web_app" "belfastweb" {
   ftp_publish_basic_authentication_enabled       = false
   webdeploy_publish_basic_authentication_enabled = true
 
+  # System-assigned: the app signs in to SQL as itself. User-assigned: the sign-in credential (and only that).
   identity {
-    type = "SystemAssigned"
+    type         = "SystemAssigned, UserAssigned"
+    identity_ids = [data.azurerm_user_assigned_identity.signin.id]
   }
 
   app_settings = {
     WEBSITE_AUTH_AAD_ALLOWED_TENANTS = var.tenant_id
+
+    # Not a secret: the client id of the sign-in identity. The auth config below names this setting as its
+    # "client secret", which makes App Service authenticate with the managed identity instead.
+    OVERRIDE_USE_MI_FIC_ASSERTION_CLIENTID = data.azurerm_user_assigned_identity.signin.client_id
   }
 
   # No password: the app signs in to SQL as its managed identity.
@@ -50,7 +63,7 @@ resource "azurerm_windows_web_app" "belfastweb" {
 
     active_directory_v2 {
       client_id                  = var.aad_client_id
-      client_secret_setting_name = "MICROSOFT_PROVIDER_AUTHENTICATION_SECRET"
+      client_secret_setting_name = "OVERRIDE_USE_MI_FIC_ASSERTION_CLIENTID"
       tenant_auth_endpoint       = "https://sts.windows.net/${var.tenant_id}/v2.0"
       allowed_audiences          = ["api://${var.aad_client_id}"]
       allowed_applications       = [var.aad_client_id]
@@ -103,15 +116,9 @@ resource "azurerm_windows_web_app" "belfastweb" {
   }
 
   sticky_settings {
-    app_setting_names = ["MICROSOFT_PROVIDER_AUTHENTICATION_SECRET"]
+    app_setting_names = ["OVERRIDE_USE_MI_FIC_ASSERTION_CLIENTID"]
   }
 
-  lifecycle {
-    # TEMPORARY: the Entra client secret is an app setting that was created in the
-    # portal. Ignoring this one key keeps it out of config and state until it moves to
-    # a federated identity credential (no secret) or Key Vault. Remove this block then.
-    ignore_changes = [app_settings["MICROSOFT_PROVIDER_AUTHENTICATION_SECRET"]]
-  }
 }
 
 # --- SQL: this app's own server and database -------------------------------------------------------
