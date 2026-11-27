@@ -3,6 +3,14 @@
 ## What this is
 Personal budgeting web app (expenses, incomes, monthly comparison and year-to-date dashboards). Single user. Public repo. Active in 2024–2025; since then only dependency/toolchain bumps (last commit May 2026, 38 commits total).
 
+## Status and handoff (2026-11-26)
+The engineering foundation is done and proven end to end (local DB + prod guard, CI gates, API and UI tests, release-tag deploys, approval-gated migrations, a real release `v0.1.0` that deployed). Start feature work from here; do not redo the foundation.
+- **How to work:** branch, make the change with tests, run the checks (Commands), open a PR, wait for `api`/`ui`, merge only when the owner says. Look at UI changes with `scripts/ui-screenshot.zsh` (desktop and `390x844`).
+- **Next roadmap item: better visualization of where money comes from and goes.** Not started. Ask the owner first: what question it should answer (category breakdown, income-to-spending flow, trends), phone vs desktop use, whether vendor/payment method matter, and whether to extend the two existing dashboards (`MonthlyComparisonDashboard.tsx`, `YearToDateProgressDashboard.tsx`, still duplicated code) or add a page. Known: charts and grids overflow horizontally on a phone.
+- **Not proven yet:** the CI principal's DDL permission (the `v0.1.0` migration step was a no-op), interactive browser behavior (no Playwright; screenshots only).
+- **Owner items still open:** delete the stale firewall rule left by an early verify run (name starts `gh-actions-`); remove the production connection string from local user-secrets; optionally add a `v*` tag rule to the `production` environment and move the web app publish profile into it.
+- **Background reading:** `docs/releasing.md`, `docs/migrations.md`, `docs/ci-prod-db-lessons.md`, `docs/repo-hardening-design.md`.
+
 ## Layout
 - `src/WebApi/`: ASP.NET Core (net10.0) Web API, EF Core + SQL Server, Swashbuckle for Swagger. One controller per entity in `Controllers/`, models in `Models/`, `Data/BudgetDbContext.cs`, EF migrations in `Migrations/`. In production it also serves the built UI from a `static/` folder next to the app.
 - `src/UI/`: React 19 + TypeScript + Vite, Ant Design, AG Grid, Chart.js, TanStack Query, React Router. Data access lives in `src/Queries.ts`.
@@ -12,7 +20,7 @@ Personal budgeting web app (expenses, incomes, monthly comparison and year-to-da
 
 ## Environments
 - Dev: WSL2 on Arch Linux, zsh. dotnet 10 SDK and node 26 are installed there. (Machine facts verified; CI pins node 25.x and dotnet 10.0.x.)
-- Production: an Azure App Service (Windows/Linux not verified) with a SQL Server database (EF Core `UseSqlServer`; where it is hosted is unverified), deployed from GitHub Actions only when the owner publishes a GitHub Release (tag `v*`); merging to `master` does not deploy (`docs/releasing.md`). Access is restricted by the App Service's Azure AD sign-in (per the owner) to the owner's personal account only; the API itself has no auth or user model, so never expose it outside that layer.
+- Production: an Azure App Service (Windows/Linux not verified) with an Azure SQL database (Basic tier, on a SQL server in a different resource group from the web app; the App Service is on the Free tier), deployed from GitHub Actions only when the owner publishes a GitHub Release (tag `v*`); merging to `master` does not deploy (`docs/releasing.md`). Access is restricted by the App Service's Azure AD sign-in (per the owner) to the owner's personal account only; the API itself has no auth or user model, so never expose it outside that layer.
 - Local DB: a throwaway SQL Server container run by Podman (rootless), managed by `scripts/dev-db.zsh`; its generated password lives outside the repo in `~/.config/budget-dev/db.env`. Use `scripts/dev-api.zsh` to run the API against it. The owner's user-secrets may still hold the **production** connection string; the env var from the script overrides it, and the guard below blocks it.
 - Prod database facts (checked via az CLI, read-only): small Basic-tier SQL database, 7-day point-in-time restore, no long-term backup, Azure AD-only auth, public network access enabled.
 
@@ -25,7 +33,7 @@ Personal budgeting web app (expenses, incomes, monthly comparison and year-to-da
 ## Commands
 Verified (2026-11-26, WSL2 Arch): `dotnet build -warnaserror`, `dotnet format --verify-no-changes` (`dotnet format` to fix), in `src/UI`: `npm ci`, `npx tsc --noEmit`, `npm run lint`, `npx prettier --check .`, `npm test`, `npm run build`, `scripts/dev-db.zsh up|down|reset|status`, `scripts/test-api.zsh` (API integration tests, 8 passing; creates and drops its own database on the local dev server), `scripts/dev-api.zsh` (API on http://localhost:5054, auto-migrates and seeds synthetic data, swagger at `/swagger`). First `up` pulls a large image and starts slowly.
 Unverified:
-- UI dev server: `cd src/UI && npm start` (Vite proxies `/api` to localhost:5054); the UI against the local API has not been exercised.
+- (Verified 2026-11-26) UI dev server: `cd src/UI && npm start` (Vite proxies `/api` to localhost:5054); with `scripts/dev-api.zsh` running, the UI renders against the seeded local DB (see "Looking at the UI").
 - Regenerate client: `npm run genclient` in `src/UI`. It reads `src/UI/swagger/swagger.json` (gitignored), so first save the running API's Swagger JSON there. Unverified.
 - EF migrations: `dotnet tool restore` then `dotnet tool run dotnet-ef ...` (local tool pinned in `dotnet-tools.json`; verified: `database update` on a fresh local DB, twice, and `migrations script --idempotent`). Production CI path: the read-only "Verify production DB access" workflow succeeded (approval gate, secret, Azure login, DB read); the DDL permission is only proven by the first real migration.
 - UI tests: Vitest + Testing Library (jsdom), `npm test` in `src/UI`; 26 tests: `Queries.test.tsx` (cache-patching mutation hooks, API client mocked with `vi.mock('./gensrc/Api')`), `gridRows.test.ts` and `useEditableRows.test.ts` (grid logic), `Grids.test.tsx` (smoke: Expenses/Incomes mount with AG Grid in jsdom; no cleanup is automatic, so tests call `cleanup`). Interactions, dashboards and real browser behavior are untested. Config lives in the `test` block of `vite.config.ts`.
