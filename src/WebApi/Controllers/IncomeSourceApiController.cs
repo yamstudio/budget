@@ -46,7 +46,7 @@ public class IncomeSourceApiController : ControllerBase
         incomeSourceToUpdate.DisplayName = incomeSource.DisplayName;
         incomeSourceToUpdate.Description = incomeSource.Description;
         await _context.SaveChangesAsync();
-        return incomeSource;
+        return incomeSourceToUpdate;
     }
 
     [HttpDelete("{incomeSourceId}", Name = "Delete Income Source")]

@@ -29,7 +29,9 @@ public class ExpenseApiTests(ApiFixture api) : ApiTestBase(api)
             note = "dinner",
         });
         update.EnsureSuccessStatusCode();
-        // Note: the PUT response body echoes the request rather than the stored row, so verify via GET.
+        var returned = await update.Content.ReadFromJsonAsync<Expense>();
+        Assert.Equal(created.ExpenseID, returned!.ExpenseID);
+        Assert.Equal(99.99m, returned.Amount);
         listed = await Client.GetFromJsonAsync<List<Expense>>("/api/expenses?fromDate=2002-03-01&toDate=2002-03-31");
         stored = Assert.Single(listed!, e => e.ExpenseID == created.ExpenseID);
         Assert.Equal(99.99m, stored.Amount);

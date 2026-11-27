@@ -79,7 +79,7 @@ public class ExpenseApiController : ControllerBase
         expenseToUpdate.Date = expense.Date;
         expenseToUpdate.Note = expense.Note;
         await _context.SaveChangesAsync();
-        return expense;
+        return expenseToUpdate;
     }
 
     [HttpDelete("{expenseId}", Name = "Delete Expense")]
