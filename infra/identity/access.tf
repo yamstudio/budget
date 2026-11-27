@@ -1,4 +1,5 @@
-# Only assigned users may sign in. Without this, any user in the tenant can.
+# Only assigned users may sign in to the web app. Without this, any user in the tenant can.
+# (Moved here from ../ because it changes Entra, which only the owner's laptop may do.)
 # The assignment is created before the flag flips so the owner is never locked out.
 resource "azuread_app_role_assignment" "owner" {
   app_role_id         = "00000000-0000-0000-0000-000000000000" # default access

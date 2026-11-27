@@ -23,13 +23,3 @@ import {
   to = azurerm_mssql_firewall_rule.allow_azure_services
   id = "/subscriptions/${var.subscription_id}/resourceGroups/${var.sql_resource_group}/providers/Microsoft.Sql/servers/${var.sql_server_name}/firewallRules/AllowAllWindowsAzureIps"
 }
-
-import {
-  to = azuread_service_principal.web_signin
-  id = "/servicePrincipals/${var.aad_sp_object_id}"
-}
-
-import {
-  to = azuread_app_role_assignment.owner
-  id = "/servicePrincipals/${var.aad_sp_object_id}/appRoleAssignedTo/${var.owner_assignment_id}"
-}

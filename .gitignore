@@ -6,8 +6,8 @@ artifact/
 **/obj/
 
 # Terraform
-infra/.terraform/
-infra/*.tfstate*
-infra/*.tfvars
-infra/crash.log
-infra/backend.hcl
+infra/**/.terraform/
+infra/**/*.tfstate*
+infra/**/*.tfvars
+infra/**/crash.log
+infra/**/backend.hcl

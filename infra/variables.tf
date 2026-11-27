@@ -37,18 +37,3 @@ variable "sql_server_name" {
   type        = string
   description = "Logical SQL server name. Kept out of the repo: the repo is public."
 }
-
-variable "aad_sp_object_id" {
-  type        = string
-  description = "Object id of the enterprise application (service principal) behind the web app sign-in."
-}
-
-variable "app_owner_object_id" {
-  type        = string
-  description = "Object id of the one user allowed to sign in to the app."
-}
-
-variable "owner_assignment_id" {
-  type        = string
-  description = "Id of the existing app role assignment for the owner (import only)."
-}

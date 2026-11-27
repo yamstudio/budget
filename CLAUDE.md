@@ -15,7 +15,8 @@ The engineering foundation is done and proven end to end (local DB + prod guard,
 - `src/WebApi/`: ASP.NET Core (net10.0) Web API, EF Core + SQL Server, Swashbuckle for Swagger. One controller per entity in `Controllers/`, models in `Models/`, `Data/BudgetDbContext.cs`, EF migrations in `Migrations/`. In production it also serves the built UI from a `static/` folder next to the app.
 - `src/UI/`: React 19 + TypeScript + Vite, Ant Design, AG Grid, Chart.js, TanStack Query, React Router. Data access lives in `src/Queries.ts`.
 - `src/UI/src/gensrc/Api.ts`: **generated** TypeScript client (swagger-typescript-api) from the API's Swagger JSON. Don't hand-edit; regenerate after API changes.
-- `.azure/`: ARM template/parameters for the hosting resources. `.github/workflows/deploy.yml`: CI/CD.
+- `.azure/`: ARM template/parameters for the hosting resources (what the release workflow still deploys). `.github/workflows/deploy.yml`: CI/CD.
+- `infra/`: Terraform, in two layers: `infra/` (web app, SQL, applied by CI later) and `infra/identity/` (CI identities and Entra, **applied only by the owner from a laptop**). Production resources are already imported into state. Read `docs/identities.md` and `infra/README.md` before touching any of it or any Azure role/secret. Never run `terraform apply` (or `destroy`, `import`, `state`) without the owner's explicit say-so; `plan` is fine. Environment names and IDs live in gitignored `terraform.tfvars`/`backend.hcl`; the repo is public, so never commit or paste them, and never paste plan output (it can contain the Entra client secret).
 - `Budget.sln` at root.
 
 ## Environments
