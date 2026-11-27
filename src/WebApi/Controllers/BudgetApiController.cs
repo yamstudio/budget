@@ -61,7 +61,7 @@ public class BudgetApiController : ControllerBase
         budgetToUpdate.ToDate = budget.ToDate;
         budgetToUpdate.ExpenseCategoryID = budget.ExpenseCategoryID;
         await _context.SaveChangesAsync();
-        return budget;
+        return budgetToUpdate;
     }
 
     [HttpDelete("{budgetId}", Name = "Delete Budget")]

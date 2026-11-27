@@ -46,7 +46,7 @@ public class VendorApiController : ControllerBase
         vendorToUpdate.DisplayName = vendor.DisplayName;
         vendorToUpdate.Description = vendor.Description;
         await _context.SaveChangesAsync();
-        return vendor;
+        return vendorToUpdate;
     }
 
     [HttpDelete("{vendorId}", Name = "Delete Vendor")]

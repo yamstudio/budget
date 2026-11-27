@@ -49,7 +49,7 @@ The owner was an Angular dev when writing the UI; much of it was copy-pasted bet
 - Run API tests: `scripts/test-api.zsh` (starts the local DB if needed). Add tests for any API change; follow `tests/WebApi.Tests/ExpenseApiTests.cs` (each test owns its data: unique lookup rows and its own date range).
 - The tests read the server from `ConnectionStrings__BudgetDbConnection` and replace only the database name; `LocalDatabaseGuard` still blocks non-local servers. In CI a throwaway SQL Server container is started with a runtime-generated password.
 - `dotnet publish` must target `src/WebApi` (the solution now has a test project).
-- **Open bug** (verified locally): every `PUT` endpoint returns the request body, not the stored row, so `expenseID`/`incomeID` come back as 0. Effects in the UI: `useUpdateExpense`/`useUpdateIncome` patch the cache by that id so they match nothing (stale cache after edits), and a saved-then-updated grid row gets row id `0`. Fix the controllers to return the stored entity, with tests.
+- PUT endpoints return the stored row with its real id (fixed; `UpdateResponseTests` covers all eight). The UI relies on this to patch its query caches by id.
 
 ## Conventions
 - Use zsh for any shell scripts.

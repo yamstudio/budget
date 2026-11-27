@@ -74,7 +74,7 @@ public class IncomeApiController : ControllerBase
         incomeToUpdate.Date = income.Date;
         incomeToUpdate.Note = income.Note;
         await _context.SaveChangesAsync();
-        return income;
+        return incomeToUpdate;
     }
 
     [HttpDelete("{incomeId}", Name = "Delete Income")]
