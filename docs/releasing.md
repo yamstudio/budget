@@ -34,4 +34,11 @@ Actions, **Build and deploy Budget app to Azure**, **Run workflow**, and in **Us
 - Database migrations are not reversed. Because migrations should be additive (`docs/migrations.md`), older code normally still runs on the newer schema. If a release made a destructive schema change, restore the database to the restore point printed in that release's migration run (7-day point-in-time restore) before or instead of rolling code back.
 
 ## Rules for Claude
-Claude never creates tags or releases, never runs the deploy workflow, and never approves environments. It may draft release-note text on request. Branch protection and the `guard` job are the technical limits; this rule covers the rest.
+- Claude cuts a release only when the owner asks for one in that session. It never runs the deploy workflow by hand, never approves the `production-infra` or `production-migrations` environments, and never bypasses the `guard` job. Branch protection and the `guard` job are the technical limits; this rule covers the rest.
+- When asked to cut a release:
+  1. Make sure everything intended is merged and the latest `master` CI run is green.
+  2. Pick the version from the latest tag (`git tag --sort=-v:refname`): bump the minor for features, the patch for fixes.
+  3. Check what the release will gate: `git diff --stat <last-tag>..master -- infra src/WebApi/Migrations .github`. Any `infra/` change pauses for **production-infra** approval and any migration for **production-migrations** approval; say so to the owner beforehand and leave both approvals to them.
+  4. Create it from `master` with generated notes (`gh release create vX.Y.Z --target master --title vX.Y.Z --generate-notes`), then watch the "Build and deploy Budget app to Azure" run to the end and report each job's result.
+  5. Remind the owner to open the site: the smoke check does not prove the app works.
+- Claude may also draft release-note text on request.
