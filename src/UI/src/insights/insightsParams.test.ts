@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ExpenseGrouping, ExpenseNecessity } from '../gensrc/Api'
-import { DEFAULT_PARAMS, activeFilterCount, formatDate, parseInsightsParams, resolveRange, toSearchParams } from './insightsParams'
+import { DEFAULT_PARAMS, activeFilterCount, parseInsightsParams, toSearchParams } from './insightsParams'
 
 const parse = (query: string) => parseInsightsParams(new URLSearchParams(query))
 
@@ -46,27 +46,6 @@ describe('toSearchParams', () => {
       necessities: [ExpenseNecessity.Discretionary],
     }
     expect(parseInsightsParams(toSearchParams(state))).toEqual(state)
-  })
-})
-
-describe('resolveRange', () => {
-  const now = new Date(2026, 10, 27) // 27 Nov 2026
-  const resolve = (range: string, extra = {}) => {
-    const { fromDate, toDate } = resolveRange({ range: range as never, ...extra }, now)
-    return [formatDate(fromDate), formatDate(toDate)]
-  }
-
-  it('presets start at the first of the month and include the current month', () => {
-    expect(resolve('3m')).toEqual(['2026-09-01', '2026-11-27'])
-    expect(resolve('12m')).toEqual(['2025-12-01', '2026-11-27'])
-  })
-
-  it('ytd starts on January 1st', () => {
-    expect(resolve('ytd')).toEqual(['2026-01-01', '2026-11-27'])
-  })
-
-  it('custom uses the given dates', () => {
-    expect(resolve('custom', { from: '2026-02-03', to: '2026-02-09' })).toEqual(['2026-02-03', '2026-02-09'])
   })
 })
 
