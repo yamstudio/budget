@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.EntityFrameworkCore;
@@ -6,6 +7,7 @@ using YamStudio.Budget.WebApi.Models;
 
 namespace YamStudio.Budget.WebApi.Controllers;
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum ExpenseGrouping
 {
     Category,
@@ -14,6 +16,7 @@ public enum ExpenseGrouping
     Necessity,
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum IncomeGrouping
 {
     Category,
