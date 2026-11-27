@@ -70,3 +70,6 @@ Honest status after the foundation work: solid for backend, data and refactoring
 - Long term: limited Azure identity for Claude sessions (the dev machine's `az` login is subscription Owner); VM + Docker + logging for production observability and staging.
 - Accepted: unenforced agent rules (only branch protection is hard), no one-shot local check script, no API client drift check, narrow API tests.
 - UI visibility: `scripts/ui-screenshot.zsh` (Windows Edge/Chrome from WSL, headless screenshots). Interactive Playwright tests are deferred: under WSL NAT mode a Windows browser's debug port is unreachable from WSL (mirrored networking or a Linux Chromium would fix that).
+
+## Release model (decided 2026-11-26)
+Claude can merge changes faster than the owner can review them, so merging and deploying are separate. `master` is continuously verified by CI; production deploys only when the owner publishes a GitHub Release (tag `v*`), whose generated notes list the PRs being shipped. A `guard` job refuses any deploy not coming from a `v*` tag on master's history; rollback is re-running the workflow from an older tag. See `docs/releasing.md`. Staging with promotion remains a long-term option (with the VM/Docker move).

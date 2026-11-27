@@ -12,13 +12,13 @@ Personal budgeting web app (expenses, incomes, monthly comparison and year-to-da
 
 ## Environments
 - Dev: WSL2 on Arch Linux, zsh. dotnet 10 SDK and node 26 are installed there. (Machine facts verified; CI pins node 25.x and dotnet 10.0.x.)
-- Production: an Azure App Service (Windows/Linux not verified) with a SQL Server database (EF Core `UseSqlServer`; where it is hosted is unverified), deployed from GitHub Actions on every push to `master`. Access is restricted by the App Service's Azure AD sign-in (per the owner) to the owner's personal account only; the API itself has no auth or user model, so never expose it outside that layer.
+- Production: an Azure App Service (Windows/Linux not verified) with a SQL Server database (EF Core `UseSqlServer`; where it is hosted is unverified), deployed from GitHub Actions only when the owner publishes a GitHub Release (tag `v*`); merging to `master` does not deploy (`docs/releasing.md`). Access is restricted by the App Service's Azure AD sign-in (per the owner) to the owner's personal account only; the API itself has no auth or user model, so never expose it outside that layer.
 - Local DB: a throwaway SQL Server container run by Podman (rootless), managed by `scripts/dev-db.zsh`; its generated password lives outside the repo in `~/.config/budget-dev/db.env`. Use `scripts/dev-api.zsh` to run the API against it. The owner's user-secrets may still hold the **production** connection string; the env var from the script overrides it, and the guard below blocks it.
 - Prod database facts (checked via az CLI, read-only): small Basic-tier SQL database, 7-day point-in-time restore, no long-term backup, Azure AD-only auth, public network access enabled.
 
 ## Data safety rules (read first)
 - Never run the API, tests, `dotnet ef`, or any script against a non-local database. `LocalDatabaseGuard` enforces this at startup (only Azure App Service or `BUDGET_ALLOW_REMOTE_DB=1` bypasses it). Never set that variable yourself.
-- Never apply migrations to production, approve the `production-migrations` environment, deploy, merge to `master`, or touch CI/infra/secrets without the owner's explicit say-so. Production migrations run from CI after owner approval; procedure and rollback: `docs/migrations.md`.
+- Never apply migrations to production, approve the `production-migrations` environment, create a tag/release, run the deploy workflow, merge to `master`, or touch CI/infra/secrets without the owner's explicit say-so. Production migrations run from CI after owner approval; procedure and rollback: `docs/migrations.md`.
 - Never print or commit connection strings, even the local one. Never commit real financial data.
 - Design and rollout plan: `docs/repo-hardening-design.md`.
 
@@ -61,7 +61,7 @@ Claude cannot see a browser by default. Use `scripts/ui-screenshot.zsh <url> <Wx
 - C#: nullable enabled, implicit usings, root namespace `YamStudio.Budget.WebApi`.
 
 ## Git workflow
-Branch off `master`, open a PR, squash-merge (confirmed; commit titles end with `(#N)`). Pushing to `master` triggers a production deploy, so don't merge without the user's say-so. Commit messages: short imperative summary.
+Branch off `master`, open a PR, squash-merge (confirmed; commit titles end with `(#N)`). Merging does not deploy; CI runs on the PR and again on `master`. Production deploys only on a published release tag (`docs/releasing.md`). Claude never creates tags or releases and never runs the deploy workflow, and does not merge without the user's say-so. Commit messages: short imperative summary.
 
 ## Known deficiencies / risks
 - API has integration tests (`tests/WebApi.Tests`, xunit v3 on Microsoft.Testing.Platform, opted in via `global.json`): the real API against real SQL Server with the real migrations, one fresh database per run. They cover migrations applying cleanly, no missing migration for model changes, and expense CRUD/summary/templates. Everything else (other controllers, budget, income) and the whole UI are untested.
@@ -71,7 +71,7 @@ Branch off `master`, open a PR, squash-merge (confirmed; commit titles end with 
 - `src/UI/README.md` is stale Create React App boilerplate (mentions yarn); root README is two lines. Both should be replaced.
 - Swagger/SwaggerUI are enabled in all environments, and `AllowedHosts` is `*`.
 - Controllers are repetitive per-entity CRUD (not audited in depth; validation and error handling not yet reviewed).
-- Deploy workflow runs ARM deployment on every push to `master` (after checks pass).
+- Deploy workflow runs the ARM deployment on every release (after checks pass). Release-time smoke check only proves the app answers.
 - The generated API client depends on a gitignored swagger file, so regenerating is a manual step easily forgotten after API changes.
 - Dependency advisories: `npm audit` was cleaned to 0 on 2026-11-26 (`npm audit fix`, lockfile only). PR CI fails on high-severity advisories in production npm dependencies (`npm audit --omit=dev --audit-level=high`) and on any NuGet advisory (via `-warnaserror`). `dependency-audit.yml` runs weekly (Mondays) over everything including dev tooling. A new advisory can therefore block a deploy until dependencies are bumped; fix with `npm audit fix` or a package bump rather than loosening the gate.
 - Stale SQL server firewall rules (two old client-IP rules) exist beside the broad "Allow Azure services" rule; consider removing them.

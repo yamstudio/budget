@@ -1,8 +1,11 @@
 name: CI
 
-# Required checks. Runs on pull requests, and is reused by deploy.yml before any deploy.
+# Required checks. Runs on pull requests and on every push to master (merging does not deploy), and is
+# reused by deploy.yml before any release deploy.
 on:
   pull_request:
+  push:
+    branches: [master]
   workflow_call:
 
 permissions:
