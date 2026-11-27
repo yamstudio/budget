@@ -65,6 +65,7 @@ Claude cannot see a browser by default. Use `scripts/ui-screenshot.zsh <url> <Wx
 - `dotnet ef` does not restore: run `dotnet restore src/WebApi` first on a fresh checkout.
 - `dotnet ef migrations list` swallows connection errors (warns, still lists, exits 0). Check its output for "An error occurred while accessing the database". `database update` does fail loudly.
 - The repo and its Actions logs and job summaries are **public**. Never print server names, runner IPs, or raw driver/EF error text in a workflow (an earlier verify run leaked the SQL server name this way). Use `.github/actions/prod-sql` for anything that touches the production database: it masks the server name, opens and closes a per-run firewall rule, and prints only classified generic failure reasons.
+- Never write `cmd || echo "...ok"` to "tolerate" a failure: it hid a failed firewall-rule delete (`az sql server firewall-rule delete` has no `--yes`) and left a rule behind. Check state first, act, then verify the end state. Wrap `az` calls so their raw errors (subscription and resource ids) are never printed.
 - A green workflow run is not proof the step did its job; assert on real output, and test the step script in a fresh clone (`git clone` to a scratch dir) including a deliberate failure.
 - The .NET SDK is pinned to the 10.0 band in `global.json` (the runner default moved to SDK 11); change it together with the target framework.
 
