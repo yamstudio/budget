@@ -4,8 +4,7 @@ Read this before touching `infra/identity/`, `.github/workflows/`, or any Azure 
 
 **The repo is public.** Never put subscription, tenant, resource group, SQL server, storage account or the owner's
 login into a committed file, a workflow log, a PR or a commit message. They live in gitignored `terraform.tfvars` and
-`backend.hcl` files locally (see `infra/README.md`) and in two masked GitHub secrets in CI (below). Also never name the
-owner's other, non-public projects.
+`backend.hcl` files locally (see `infra/README.md`) and in two masked GitHub secrets in CI (below).
 
 ## The model in one paragraph
 
@@ -20,8 +19,8 @@ we pre-approved. There are four CI identities, one per **privilege boundary**, e
 | `belfast-deploy` | the release `deploy` job | publish code to the web app, nothing else |
 | `belfast-migrate` | the release `migrate` job and `verify-prod-db.yml` | open/close its own SQL firewall rule; alter the `budget` schema (as a SQL user) |
 
-The names say *what they protect*, not where they are called from. A second app gets its own set (`<app>-migrate` ...),
-never a shared one.
+The names say *what they protect*, not where they are called from. Each identity serves one purpose; never widen one to
+cover another.
 
 ## Two Terraform layers, two appliers
 
@@ -141,11 +140,10 @@ group for the migration jobs. Fork PRs get no secrets or OIDC token and are skip
 - **Make a CI identity able to apply `infra/identity/`.** See the rule above.
 - **Commit** `terraform.tfvars`, `backend.hcl`, state, or any name or id from them.
 
-## Adding an identity (or a second app)
+## Adding an identity
 
-Add an entry to `local.identities` and rows to `local.grants` in `infra/identity/main.tf`, name it `<app>-<purpose>`,
-bind its subject to one environment, apply from the laptop, and update the tables above. A new app in another database
-also needs its own SQL user, never `belfast-migrate`.
+Add an entry to `local.identities` and rows to `local.grants` in `infra/identity/main.tf`, name it `belfast-<purpose>`,
+bind its subject to one environment, apply from the laptop, and update the tables above.
 
 ## Known limits
 

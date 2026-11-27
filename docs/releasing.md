@@ -29,7 +29,7 @@ Merging to `master` does **not** deploy. `master` is kept releasable by CI (PR c
 
 ## Roll back
 Actions, **Build and deploy Budget app to Azure**, **Run workflow**, and in **Use workflow from** pick the older `v*` tag. It rebuilds and redeploys that tag, using that tag's copy of the workflow. Caveats:
-- Only tags that already carry the current pipeline can be re-run (`v0.1.2` and later). Earlier tags carry earlier workflows: `v0.1.0` needs credentials that no longer exist, and `v0.1.1` has a deploy bug that publishes the wrong files.
+- Only tags `v0.1.2` or later can be re-run; earlier tags predate the current pipeline and fail or deploy the wrong files.
 - Infrastructure is not rolled back by re-running a deploy. To undo an infra change, revert it on `master` and cut a new release (the `infra` job applies it after approval).
 - Database migrations are not reversed. Because migrations should be additive (`docs/migrations.md`), older code normally still runs on the newer schema. If a release made a destructive schema change, restore the database to the restore point printed in that release's migration run (7-day point-in-time restore) before or instead of rolling code back.
 
