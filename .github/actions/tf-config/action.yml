@@ -1,0 +1,56 @@
+name: Production config for Terraform and the migration jobs
+description: >
+  Writes infra/terraform.tfvars and infra/backend.hcl from two secrets (the same files used locally), masks every
+  value in the (public) logs BEFORE anything is written, and exports the passwordless SQL connection string, the
+  resource group, and the tenant and subscription ids derived from them. Never prints values.
+
+inputs:
+  tf-vars:
+    description: Contents of infra/terraform.tfvars (secret)
+    required: true
+  tf-backend:
+    description: Contents of infra/backend.hcl (secret)
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        TF_VARS: ${{ inputs.tf-vars }}
+        TF_BACKEND: ${{ inputs.tf-backend }}
+      run: |
+        set -euo pipefail
+        [[ -n "$TF_VARS" && -n "$TF_BACKEND" ]] || { echo "The TF_VARS / TF_BACKEND secrets are not set."; exit 1; }
+
+        # Mask every quoted value (ids, names, the admin login) before anything can be printed.
+        mask_values() {
+          grep -oE '"[^"]+"' <<< "$1" | tr -d '"' | while IFS= read -r v; do
+            [[ -n "$v" ]] && echo "::add-mask::$v"
+          done || true
+        }
+        mask_values "$TF_VARS"
+        mask_values "$TF_BACKEND"
+
+        printf '%s\n' "$TF_VARS" > infra/terraform.tfvars
+        printf '%s\n' "$TF_BACKEND" > infra/backend.hcl
+
+        get() { sed -nE "s/^$1[[:space:]]*=[[:space:]]*\"([^\"]+)\".*/\1/p" infra/terraform.tfvars | head -1; }
+        server="$(get sql_server_name)"
+        rg="$(get web_resource_group)"
+        tenant="$(get tenant_id)"
+        subscription="$(get subscription_id)"
+        [[ -n "$server" && -n "$rg" && -n "$tenant" && -n "$subscription" ]] || { echo "TF_VARS is missing sql_server_name, web_resource_group, tenant_id or subscription_id."; exit 1; }
+
+        # Passwordless: the job's Azure login (OIDC) is the database identity ("Active Directory Default").
+        {
+          echo "PROD_SQL_RESOURCE_GROUP=$rg"
+          # Tenant and subscription ids come from here (masked above), not from GitHub variables, which are
+          # printed in plain text in the public logs.
+          echo "AZURE_TENANT_ID=$tenant"
+          echo "AZURE_SUBSCRIPTION_ID=$subscription"
+          echo "ARM_TENANT_ID=$tenant"
+          echo "ARM_SUBSCRIPTION_ID=$subscription"
+          echo "PROD_DB_CONNECTION=Server=tcp:${server}.database.windows.net,1433;Initial Catalog=budget;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=\"Active Directory Default\";"
+        } >> "$GITHUB_ENV"
+        echo "Production config loaded (values masked)."

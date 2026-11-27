@@ -122,7 +122,6 @@ resource "azurerm_windows_web_app" "belfastweb" {
 }
 
 # --- SQL: this app's own server and database -------------------------------------------------------
-# (Moved here from a server shared with other, non-public projects; see docs/sql-server-move.md.)
 
 resource "azurerm_mssql_server" "budget" {
   name                = var.sql_server_name

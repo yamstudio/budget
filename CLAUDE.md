@@ -1,43 +1,43 @@
 # CLAUDE.md
 
 ## What this is
-Personal budgeting web app (expenses, incomes, monthly comparison and year-to-date dashboards). Single user. Public repo. Active in 2024–2025; since then only dependency/toolchain bumps (last commit May 2026, 38 commits total).
+Personal budgeting web app (expenses, incomes, monthly comparison and year-to-date dashboards). Single user. Public repo. Built in 2024–2025, then infrastructure, CI and tests were hardened in late 2026.
 
-## Status and handoff (2026-11-26)
-The engineering foundation is done and proven end to end (local DB + prod guard, CI gates, API and UI tests, release-tag deploys, approval-gated migrations, a real release `v0.1.0` that deployed). Start feature work from here; do not redo the foundation.
+## Status and handoff
+The engineering foundation is done (local DB + prod guard, CI gates, API and UI tests, release-tag deploys, approval-gated infra and migrations, infrastructure in Terraform, no stored cloud credentials). Start feature work from here; do not redo the foundation.
 - **How to work:** branch, make the change with tests, run the checks (Commands), open a PR, wait for `api`/`ui`, merge only when the owner says. Look at UI changes with `scripts/ui-screenshot.zsh` (desktop and `390x844`).
 - **Next roadmap item: better visualization of where money comes from and goes.** Not started. Ask the owner first: what question it should answer (category breakdown, income-to-spending flow, trends), phone vs desktop use, whether vendor/payment method matter, and whether to extend the two existing dashboards (`MonthlyComparisonDashboard.tsx`, `YearToDateProgressDashboard.tsx`, still duplicated code) or add a page. Known: charts and grids overflow horizontally on a phone.
-- **Not proven yet:** the CI principal's DDL permission (the `v0.1.0` migration step was a no-op), interactive browser behavior (no Playwright; screenshots only).
-- **Owner items still open:** delete the stale firewall rule left by an early verify run (name starts `gh-actions-`); remove the production connection string from local user-secrets; optionally add a `v*` tag rule to the `production` environment and move the web app publish profile into it.
-- **Background reading:** `docs/releasing.md`, `docs/migrations.md`, `docs/ci-prod-db-lessons.md`, `docs/repo-hardening-design.md`.
+- **Not proven yet:** interactive browser behavior (no Playwright; screenshots only).
+- **Owner item still open:** remove the production connection string from local user-secrets (the guard makes it inert).
+- **Background reading:** `docs/releasing.md`, `docs/migrations.md`, `docs/identities.md`, `infra/README.md`.
 
 ## Layout
 - `src/WebApi/`: ASP.NET Core (net10.0) Web API, EF Core + SQL Server, Swashbuckle for Swagger. One controller per entity in `Controllers/`, models in `Models/`, `Data/BudgetDbContext.cs`, EF migrations in `Migrations/`. In production it also serves the built UI from a `static/` folder next to the app.
 - `src/UI/`: React 19 + TypeScript + Vite, Ant Design, AG Grid, Chart.js, TanStack Query, React Router. Data access lives in `src/Queries.ts`.
 - `src/UI/src/gensrc/Api.ts`: **generated** TypeScript client (swagger-typescript-api) from the API's Swagger JSON. Don't hand-edit; regenerate after API changes.
-- `.azure/`: ARM template/parameters for the hosting resources (what the release workflow still deploys). `.github/workflows/deploy.yml`: CI/CD.
-- `infra/`: Terraform, in two layers: `infra/` (web app, SQL, applied by CI later) and `infra/identity/` (CI identities and Entra, **applied only by the owner from a laptop**). Production resources are already imported into state. Read `docs/identities.md` and `infra/README.md` before touching any of it or any Azure role/secret. Never run `terraform apply` (or `destroy`, `import`, `state`) without the owner's explicit say-so; `plan` is fine. Environment names and IDs live in gitignored `terraform.tfvars`/`backend.hcl`; the repo is public, so never commit or paste them, and never paste plan output (it can contain the Entra client secret).
+- `.github/workflows/`: `ci.yml` (PR and master checks, reused by the release), `deploy.yml` (release: infra, migrations, deploy), `infra-plan.yml` (read-only Terraform plan on PRs touching `infra/`), `verify-prod-db.yml`, `dependency-audit.yml`; composite actions in `.github/actions/` (`prod-sql`, `tf-config`).
+- `infra/`: Terraform, in two layers: `infra/` (web app, plan, SQL server and database; applied by the release workflow after approval) and `infra/identity/` (the CI identities, their GitHub OIDC trust and roles, and the Entra sign-in app; **applied only by the owner from a laptop**). Read `docs/identities.md` and `infra/README.md` before touching any of it or any Azure role. Never run `terraform apply` (or `destroy`, `import`, `state`) without the owner's explicit say-so; `plan` is fine. Environment names and IDs live in gitignored `terraform.tfvars`/`backend.hcl` locally and in the `TF_VARS`/`TF_BACKEND` GitHub secrets in CI; the repo is public, so never commit or paste them, and do not paste plan output.
 - `Budget.sln` at root.
 
 ## Environments
 - Dev: WSL2 on Arch Linux, zsh. dotnet 10 SDK and node 26 are installed there. (Machine facts verified; CI pins node 25.x and dotnet 10.0.x.)
-- Production: an Azure App Service (Windows/Linux not verified) with an Azure SQL database (Basic tier, on its own SQL server in the same resource group as the web app, moved there on 2026-11-27; the App Service is on the Free tier), deployed from GitHub Actions only when the owner publishes a GitHub Release (tag `v*`); merging to `master` does not deploy (`docs/releasing.md`). Access is restricted by the App Service's Azure AD sign-in (per the owner) to the owner's personal account only; the API itself has no auth or user model, so never expose it outside that layer.
+- Production: an Azure App Service (Windows, Free tier) with an Azure SQL database (Basic tier, on its own SQL server in the same resource group), deployed from GitHub Actions only when the owner publishes a GitHub Release (tag `v*`); merging to `master` does not deploy (`docs/releasing.md`). Access is restricted by the App Service's Azure AD sign-in (per the owner) to the owner's personal account only; the API itself has no auth or user model, so never expose it outside that layer.
 - Local DB: a throwaway SQL Server container run by Podman (rootless), managed by `scripts/dev-db.zsh`; its generated password lives outside the repo in `~/.config/budget-dev/db.env`. Use `scripts/dev-api.zsh` to run the API against it. The owner's user-secrets may still hold the **production** connection string; the env var from the script overrides it, and the guard below blocks it.
-- Prod database facts (checked via az CLI, read-only): small Basic-tier SQL database, 7-day point-in-time restore, no long-term backup, Azure AD-only auth, public network access enabled.
+- Prod database facts: small Basic-tier SQL database, 7-day point-in-time restore, no long-term backup, Azure AD-only auth, public network access enabled.
+- GitHub holds **no cloud credentials**. Workflows log in to Azure with GitHub OIDC as one of four per-purpose identities (`docs/identities.md`). The only secrets are `TF_VARS` and `TF_BACKEND` (the contents of the local gitignored files, masked in logs); the rest is plain variables (tenant, subscription, client ids). The web app has no secrets either: passwordless SQL and managed-identity sign-in.
 
 ## Data safety rules (read first)
 - Never run the API, tests, `dotnet ef`, or any script against a non-local database. `LocalDatabaseGuard` enforces this at startup (only Azure App Service or `BUDGET_ALLOW_REMOTE_DB=1` bypasses it). Never set that variable yourself.
-- Never apply migrations to production, approve the `production-migrations` environment, create a tag/release, run the deploy workflow, merge to `master`, or touch CI/infra/secrets without the owner's explicit say-so. Production migrations run from CI after owner approval; procedure and rollback: `docs/migrations.md`.
+- Never apply migrations to production, approve the `production-migrations` or `production-infra` environment, create a tag/release, run the deploy workflow, merge to `master`, or touch CI/infra/secrets without the owner's explicit say-so. Production migrations run from CI after owner approval; procedure and rollback: `docs/migrations.md`.
 - Never print or commit connection strings, even the local one. Never commit real financial data.
 - This repo is public and the owner's other projects are not. Never write the names of those projects, their repos, databases, resource groups or other resources into any committed file, workflow, PR title/body or commit message (the existence of a project or database is itself private). Say "other, non-public projects". Same for the SQL server, resource group and state account names.
-- Design and rollout plan: `docs/repo-hardening-design.md`.
 
 ## Commands
 Verified (2026-11-26, WSL2 Arch): `dotnet build -warnaserror`, `dotnet format --verify-no-changes` (`dotnet format` to fix), in `src/UI`: `npm ci`, `npx tsc --noEmit`, `npm run lint`, `npx prettier --check .`, `npm test`, `npm run build`, `scripts/dev-db.zsh up|down|reset|status`, `scripts/test-api.zsh` (API integration tests, 8 passing; creates and drops its own database on the local dev server), `scripts/dev-api.zsh` (API on http://localhost:5054, auto-migrates and seeds synthetic data, swagger at `/swagger`). First `up` pulls a large image and starts slowly.
 Unverified:
 - (Verified 2026-11-26) UI dev server: `cd src/UI && npm start` (Vite proxies `/api` to localhost:5054); with `scripts/dev-api.zsh` running, the UI renders against the seeded local DB (see "Looking at the UI").
 - Regenerate client: `npm run genclient` in `src/UI`. It reads `src/UI/swagger/swagger.json` (gitignored), so first save the running API's Swagger JSON there. Unverified.
-- EF migrations: `dotnet tool restore` then `dotnet tool run dotnet-ef ...` (local tool pinned in `dotnet-tools.json`; verified: `database update` on a fresh local DB, twice, and `migrations script --idempotent`). Production CI path: the read-only "Verify production DB access" workflow succeeded (approval gate, secret, Azure login, DB read); the DDL permission is only proven by the first real migration.
+- EF migrations: `dotnet tool restore` then `dotnet tool run dotnet-ef ...` (local tool pinned in `dotnet-tools.json`; verified: `database update` on a fresh local DB, twice, and `migrations script --idempotent`). Production path: `docs/migrations.md`; the read-only "Verify production DB access" workflow exercises it without changing anything.
 - UI tests: Vitest + Testing Library (jsdom), `npm test` in `src/UI`; 26 tests: `Queries.test.tsx` (cache-patching mutation hooks, API client mocked with `vi.mock('./gensrc/Api')`), `gridRows.test.ts` and `useEditableRows.test.ts` (grid logic), `Grids.test.tsx` (smoke: Expenses/Incomes mount with AG Grid in jsdom; no cleanup is automatic, so tests call `cleanup`). Interactions, dashboards and real browser behavior are untested. Config lives in the `test` block of `vite.config.ts`.
 
 ## Roadmap (owner's stated direction, in rough order)
@@ -80,20 +80,20 @@ Claude cannot see a browser by default. Use `scripts/ui-screenshot.zsh <url> <Wx
 - The .NET SDK is pinned to the 10.0 band in `global.json` (the runner default moved to SDK 11); change it together with the target framework.
 
 ## Git workflow
-Branch off `master`, open a PR, squash-merge (confirmed; commit titles end with `(#N)`). Merging does not deploy; CI runs on the PR and again on `master`. Production deploys only on a published release tag, semver `v0.1.0`-style (`docs/releasing.md`). The write-up of what we learned getting prod DB migrations working from CI (reusable for other stacks sharing the SQL host) is `docs/ci-prod-db-lessons.md`. Claude never creates tags or releases and never runs the deploy workflow, and does not merge without the user's say-so. Commit messages: short imperative summary.
+Branch off `master`, open a PR, squash-merge (confirmed; commit titles end with `(#N)`). Merging does not deploy; CI runs on the PR and again on `master`. Production deploys only on a published release tag, semver `v0.1.0`-style (`docs/releasing.md`). Claude never creates tags or releases and never runs the deploy workflow, and does not merge without the user's say-so. Commit messages: short imperative summary.
 
 ## Known deficiencies / risks
 - API has integration tests (`tests/WebApi.Tests`, xunit v3 on Microsoft.Testing.Platform, opted in via `global.json`): the real API against real SQL Server with the real migrations, one fresh database per run. They cover migrations applying cleanly, no missing migration for model changes, and expense CRUD/summary/templates. Everything else (other controllers, budget, income) and the whole UI are untested.
-- CI (`.github/workflows/ci.yml`, required before deploy and on PRs) runs build with `-warnaserror` (includes the NuGet vulnerability audit), `dotnet format --verify-no-changes`, `tsc`, eslint, prettier check and the UI build. Branch protection making it required for merging is a GitHub setting owned by the owner (verify it is on).
+- CI (`.github/workflows/ci.yml`, required before deploy and on PRs) runs build with `-warnaserror` (includes the NuGet vulnerability audit), `dotnet format --verify-no-changes`, `tsc`, eslint, prettier check, the UI build, and `terraform fmt`/`validate` for both layers. Branch protection making it required for merging is a GitHub setting owned by the owner (verify it is on).
 - ESLint has 2 existing warnings (deprecated React 19 patterns: `forwardRef` in `AutoCompleteCellEditor.tsx`, `Context.Provider` in `App.tsx`). `npm run lint` is a ratchet: `--max-warnings 2`. Lower the number as they are fixed; never raise it.
 - Dependencies are bleeding edge on purpose (owner prefers newest that works: net10, TypeScript 6, ESLint 10, Vite 8, node 26) and bumped frequently with few tests to catch breakage. EF Core 11 exists but needs .NET 11; stay on the latest 10.x patch until moving the TFM.
 - `src/UI/README.md` is stale Create React App boilerplate (mentions yarn); root README is two lines. Both should be replaced.
 - Swagger/SwaggerUI are enabled in all environments, and `AllowedHosts` is `*`.
 - Controllers are repetitive per-entity CRUD (not audited in depth; validation and error handling not yet reviewed).
-- Deploy workflow runs the ARM deployment on every release (after checks pass). Release-time smoke check only proves the app answers.
+- A release runs, in order: checks, then Terraform (only if `infra/` changed since the last release; approval-gated; refuses to delete or replace anything), migrations (only if they changed; approval-gated), then the deploy. The release-time smoke check only proves the app answers.
 - The generated API client depends on a gitignored swagger file, so regenerating is a manual step easily forgotten after API changes.
 - Dependency advisories: `npm audit` was cleaned to 0 on 2026-11-26 (`npm audit fix`, lockfile only). PR CI fails on high-severity advisories in production npm dependencies (`npm audit --omit=dev --audit-level=high`) and on any NuGet advisory (via `-warnaserror`). `dependency-audit.yml` runs weekly (Mondays) over everything including dev tooling. A new advisory can therefore block a deploy until dependencies are bumped; fix with `npm audit fix` or a package bump rather than loosening the gate.
-- The app's SQL server has only the "Allow Azure services" firewall rule (the stale client-IP rules stayed on the old shared server).
+- The app's SQL server has only the "Allow Azure services" firewall rule; CI opens a per-run rule for its migration step and removes it.
 
 ## Accepted risks (owner decision, 2026-11-26)
 - Rules in this file are instructions, not enforced: there are no project permission rules (`.claude/settings.json`) blocking merges, `az` writes or the DB-guard override. Master branch protection (required `api`/`ui` checks, up-to-date branch, applies to admins, no force-push) is the one hard control.

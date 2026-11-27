@@ -6,10 +6,6 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 4.0"
     }
-    azuread = {
-      source  = "hashicorp/azuread"
-      version = "~> 3.0"
-    }
   }
 
   # State lives in a private, versioned, AD-only blob container (no account keys).
@@ -17,10 +13,6 @@ terraform {
   backend "azurerm" {
     use_azuread_auth = true
   }
-}
-
-provider "azuread" {
-  tenant_id = var.tenant_id
 }
 
 provider "azurerm" {

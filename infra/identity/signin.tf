@@ -1,5 +1,5 @@
-# The web app's Entra sign-in used a client secret kept as an app setting. Instead the app proves itself to the
-# sign-in app registration with a managed identity (a "federated credential"): no secret to store, leak or expire.
+# The web app proves itself to its Entra sign-in app registration with a managed identity (a "federated credential")
+# instead of a client secret: nothing to store, leak or expire.
 # Docs: "Configure Microsoft Entra authentication" (App Service), section on using a managed identity as the credential.
 #
 # It must be a USER-assigned identity (the web app's existing system-assigned one is used for SQL and is a different

@@ -77,3 +77,19 @@ jobs:
         run: npm test
       - name: Build
         run: npm run build
+
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '~> 1.15'
+      - name: Format
+        run: terraform fmt -check -recursive infra
+      - name: Validate (no backend, no credentials)
+        run: |
+          for d in infra infra/identity; do
+            terraform -chdir="$d" init -backend=false -input=false -no-color
+            terraform -chdir="$d" validate -no-color
+          done
