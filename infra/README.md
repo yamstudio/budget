@@ -5,7 +5,7 @@ Two layers, two state files, two appliers. **Read `docs/identities.md` first.**
 | Directory | Manages | Applied by | State |
 |---|---|---|---|
 | `infra/` | web app, its plan, its own SQL server, the `budget` database, the Azure-services firewall rule | the release workflow as `belfast-infra`, after approval | container `tfstate`, key `budget.tfstate` |
-| `infra/identity/` | the four CI identities, their GitHub OIDC trust and Azure roles, the web app's sign-in identity, and "assignment required" on the Entra sign-in app | the owner, from a laptop | container `tfstate-identity`, key `identity.tfstate` |
+| `infra/identity/` | the four CI identities, their GitHub OIDC trust and Azure roles, the web app's sign-in identity, the Entra sign-in app registration (`belfast-web`) and "assignment required" on it | the owner, from a laptop | container `tfstate-identity`, key `identity.tfstate` |
 
 Resource groups are created by hand and only read here.
 

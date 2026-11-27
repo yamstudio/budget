@@ -12,3 +12,8 @@ output "tenant_id" {
 output "subscription_id" {
   value = var.subscription_id
 }
+
+output "signin_client_id" {
+  description = "Client id of the sign-in app registration: the aad_client_id value for infra/ (TF_VARS)."
+  value       = azuread_application.web.client_id
+}
