@@ -72,6 +72,7 @@ Claude cannot see a browser by default. Use `scripts/ui-screenshot.zsh <url> <Wx
 
 ## Workflow (GitHub Actions) pitfalls, learned the hard way
 - Default `run` steps use `bash -e` without `pipefail`: `failing-command | tee` reports success. Use `shell: bash` and capture output (`out="$(cmd 2>&1)"`) instead of piping.
+- `actions/checkout` wipes the workspace. Never download an artifact into the workspace before a checkout, and deploy from a dedicated directory (`artifact/`), never `.`: that once published the repository (and the CI config files) as the web app and took the site down while the smoke check still passed.
 - `dotnet ef` does not restore: run `dotnet restore src/WebApi` first on a fresh checkout.
 - `dotnet ef migrations list` swallows connection errors (warns, still lists, exits 0). Check its output for "An error occurred while accessing the database". `database update` does fail loudly.
 - The repo and its Actions logs and job summaries are **public**. Never print server names, runner IPs, or raw driver/EF error text in a workflow (an earlier verify run leaked the SQL server name this way). Use `.github/actions/prod-sql` for anything that touches the production database: it masks the server name, opens and closes a per-run firewall rule, and prints only classified generic failure reasons.
@@ -90,7 +91,7 @@ Branch off `master`, open a PR, squash-merge (confirmed; commit titles end with 
 - `src/UI/README.md` is stale Create React App boilerplate (mentions yarn); root README is two lines. Both should be replaced.
 - Swagger/SwaggerUI are enabled in all environments, and `AllowedHosts` is `*`.
 - Controllers are repetitive per-entity CRUD (not audited in depth; validation and error handling not yet reviewed).
-- A release runs, in order: checks, then Terraform (only if `infra/` changed since the last release; approval-gated; refuses to delete or replace anything), migrations (only if they changed; approval-gated), then the deploy. The release-time smoke check only proves the app answers.
+- A release runs, in order: checks, then Terraform (only if `infra/` changed since the last release; approval-gated; refuses to delete or replace anything), migrations (only if they changed; approval-gated), then the deploy. The release-time smoke check proves little: the sign-in redirect answers even when the app behind it is broken. Open the site after every release.
 - The generated API client depends on a gitignored swagger file, so regenerating is a manual step easily forgotten after API changes.
 - Dependency advisories: `npm audit` was cleaned to 0 on 2026-11-26 (`npm audit fix`, lockfile only). PR CI fails on high-severity advisories in production npm dependencies (`npm audit --omit=dev --audit-level=high`) and on any NuGet advisory (via `-warnaserror`). `dependency-audit.yml` runs weekly (Mondays) over everything including dev tooling. A new advisory can therefore block a deploy until dependencies are bumped; fix with `npm audit fix` or a package bump rather than loosening the gate.
 - The app's SQL server has only the "Allow Azure services" firewall rule; CI opens a per-run rule for its migration step and removes it.

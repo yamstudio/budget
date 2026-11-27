@@ -2,7 +2,8 @@ name: Build and deploy Budget app to Azure
 
 env:
   AZURE_WEBAPP_NAME: belfastweb
-  AZURE_WEBAPP_PACKAGE_PATH: '.'
+  # The built app, downloaded into its own directory: never deploy '.', which also holds the checkout.
+  AZURE_WEBAPP_PACKAGE_PATH: 'artifact'
   DOTNET_VERSION: '10.0.x'
   NODE_VERSION: '26.x'
 
@@ -272,11 +273,7 @@ jobs:
       id-token: write
 
     steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v5
-        with:
-          name: budget
-
+      # Checkout first: it wipes the workspace, so anything downloaded before it would be deleted.
       - uses: actions/checkout@v6
 
       # Exports the masked tenant and subscription ids (GitHub variables would print them in the public log).
@@ -291,6 +288,25 @@ jobs:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v5
+        with:
+          name: budget
+          path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+
+      # Refuse to publish anything that is not the built app (a wrong package turns the site into a 404 while the
+      # sign-in redirect still makes the smoke check pass).
+      - name: Check the package before deploying
+        shell: bash
+        run: |
+          pkg='${{ env.AZURE_WEBAPP_PACKAGE_PATH }}'
+          [[ -f "$pkg/static/index.html" ]] || { echo "The package has no built UI (static/index.html)."; exit 1; }
+          ls "$pkg"/*.dll > /dev/null 2>&1 || { echo "The package has no application DLLs."; exit 1; }
+          for bad in infra .github src docs .git; do
+            [[ ! -e "$pkg/$bad" ]] || { echo "The package contains repository files ($bad); refusing to deploy."; exit 1; }
+          done
+          echo "Package looks like the built app."
 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
