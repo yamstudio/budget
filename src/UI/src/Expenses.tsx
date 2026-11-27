@@ -1,12 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import type { ColDef, GetRowIdFunc } from 'ag-grid-community'
-import { AgGridReact, CustomCellRendererProps } from 'ag-grid-react'
-import { Spin } from 'antd'
 import AddExpenseButtons from './AddExpenseButtons'
-import AutoCompleteCellEditor from './AutoCompleteCellEditor'
-import ButtonCellRenderer from './ButtonCellRenderer'
-import type { ButtonCellRendererProps } from './ButtonCellRenderer'
+import BudgetGrid from './BudgetGrid'
+import { amountColumn, dateColumn, deleteColumn, lookupColumn, noteColumn, saveColumn } from './gridColumns'
+import { canSave, toRefData } from './gridRows'
+import type { EditableRow } from './gridRows'
 import {
   useCreateExpense,
   useCreateVendor,
@@ -17,6 +15,7 @@ import {
   useUpdateExpense,
   useVendors,
 } from './Queries'
+import { useEditableRows } from './useEditableRows'
 import type { Expense, ExpenseTemplate } from './gensrc/Api'
 
 type ExpensesProps = {
@@ -24,244 +23,93 @@ type ExpensesProps = {
   toDate: Date
 }
 
-type ExpenseRow = Omit<Expense, 'expenseCategory' | 'vendor' | 'paymentMethod'> & {
-  original: Expense | undefined
-}
+type ExpenseRow = EditableRow<Expense>
+
+const idOf = (expense: Expense) => expense.expenseID
+const REQUIRED: (keyof Expense)[] = ['date', 'amount', 'expenseCategoryID', 'vendorID', 'paymentMethodID']
+const COMPARED: (keyof Expense)[] = [...REQUIRED, 'note']
 
 const Expenses = ({ fromDate, toDate }: ExpensesProps) => {
-  const expenseCategories = useExpenseCategories().data
   const queryClient = useQueryClient()
+  const expenseCategories = useExpenseCategories().data
   const vendors = useVendors().data
-  const createVendor = useCreateVendor(queryClient)
   const paymentMethods = usePaymentMethods().data
   const expenses = useExpenses(fromDate, toDate).data
-  const createExpense = useCreateExpense(queryClient)
-  const updateExpense = useUpdateExpense(queryClient)
-  const deleteExpense = useDeleteExpense(queryClient)
-  const expenseCategoryIDToDisplayName: { [key: string]: string } = useMemo(
-    () =>
-      expenseCategories?.reduce(
-        (accumulator, { expenseCategoryID, displayName }) => ({
-          ...accumulator,
-          [expenseCategoryID!]: displayName,
-        }),
-        {} as { [key: string]: string }
-      ) ?? {},
-    [expenseCategories]
-  )
-  const paymentMethodIDToDisplayName: { [key: string]: string } = useMemo(
-    () =>
-      paymentMethods?.reduce(
-        (accumulator, { paymentMethodID, displayName }) => ({
-          ...accumulator,
-          [paymentMethodID!]: displayName,
-        }),
-        {} as { [key: string]: string }
-      ) ?? {},
-    [paymentMethods]
-  )
-  const vendorIDToDisplayName: { [key: string]: string } = useMemo(
-    () =>
-      vendors?.reduce(
-        (accumulator, { vendorID, displayName }) => ({
-          ...accumulator,
-          [vendorID!]: displayName,
-        }),
-        {} as { [key: string]: string }
-      ) ?? {},
-    [vendors]
-  )
+  const { mutateAsync: createVendor } = useCreateVendor(queryClient)
+  const { mutateAsync: createExpense } = useCreateExpense(queryClient)
+  const { mutateAsync: updateExpense } = useUpdateExpense(queryClient)
+  const { mutateAsync: deleteExpense } = useDeleteExpense(queryClient)
+  const { rows, addDraft, save, remove } = useEditableRows(expenses, idOf)
 
-  const [expenseRows, setExpenseRows] = useState<ExpenseRow[] | undefined>(undefined)
-  const [nextExpenseID, setNextExpenseID] = useState<number>(-1)
-  useEffect(
-    () =>
-      setExpenseRows((rows) =>
-        rows
-          ? rows
-          : expenses?.map((expense) => ({
-              ...expense,
-              original: expense,
-            }))
-      ),
-    [expenses]
-  )
-
-  const colDefs: ColDef<ExpenseRow>[] = useMemo(
+  const colDefs = useMemo(
     () => [
-      { editable: true, field: 'date', headerName: '🗓️', headerTooltip: 'Date', width: 120 } satisfies ColDef<
-        ExpenseRow,
-        string | undefined
-      >,
-      {
-        cellEditor: AutoCompleteCellEditor,
-        editable: true,
+      dateColumn<ExpenseRow>(),
+      lookupColumn<ExpenseRow>({
         field: 'expenseCategoryID',
         headerName: '🏷️',
         headerTooltip: 'Category',
-        refData: expenseCategoryIDToDisplayName,
+        refData: toRefData(
+          expenseCategories,
+          (c) => c.expenseCategoryID,
+          (c) => c.displayName
+        ),
         width: 150,
-      } satisfies ColDef<ExpenseRow, number | undefined>,
-      {
-        cellEditor: AutoCompleteCellEditor,
-        cellEditorParams: {
-          addRefData: (vendorDisplayName: string) =>
-            createVendor.mutateAsync({ displayName: vendorDisplayName, description: vendorDisplayName }).then(({ vendorID }) => vendorID),
-        },
-        editable: true,
+      }),
+      lookupColumn<ExpenseRow>({
         field: 'vendorID',
         headerName: '🏪',
         headerTooltip: 'Vendor',
-        refData: vendorIDToDisplayName,
+        refData: toRefData(
+          vendors,
+          (v) => v.vendorID,
+          (v) => v.displayName
+        ),
         width: 200,
-      } satisfies ColDef<ExpenseRow, number | undefined>,
-      {
-        cellEditor: AutoCompleteCellEditor,
-        editable: true,
+        addRefData: (displayName) => createVendor({ displayName, description: displayName }).then(({ vendorID }) => vendorID),
+      }),
+      lookupColumn<ExpenseRow>({
         field: 'paymentMethodID',
         headerName: '💳',
         headerTooltip: 'Payment Method',
-        refData: paymentMethodIDToDisplayName,
+        refData: toRefData(
+          paymentMethods,
+          (m) => m.paymentMethodID,
+          (m) => m.displayName
+        ),
         width: 200,
-      } satisfies ColDef<ExpenseRow, number | undefined>,
-      {
-        cellEditor: 'agNumberCellEditor',
-        cellEditorParams: {
-          precision: 2,
-        },
-        editable: true,
-        field: 'amount',
-        headerName: '💶',
-        headerTooltip: 'Amount',
-        width: 90,
-      } satisfies ColDef<ExpenseRow, number | undefined>,
-      { editable: true, field: 'note', headerName: '📓', headerTooltip: 'Note', width: 120 } satisfies ColDef<
-        ExpenseRow,
-        string | null | undefined
-      >,
-      {
-        cellRenderer: ButtonCellRenderer,
-        cellRendererParams: {
-          icon: 'save',
-          clickedHandler: ({ data }: CustomCellRendererProps<ExpenseRow>) => {
-            const { original, date, amount, note, expenseCategoryID, vendorID, paymentMethodID, expenseID } = data!
-            const promise = original
-              ? updateExpense.mutateAsync({
-                  expenseID,
-                  expenseCategoryID,
-                  paymentMethodID,
-                  vendorID,
-                  date,
-                  amount,
-                  note,
-                })
-              : createExpense.mutateAsync({
-                  expenseID: 0,
-                  expenseCategoryID,
-                  paymentMethodID,
-                  vendorID,
-                  date,
-                  amount,
-                  note,
-                })
-            promise.then((saved) =>
-              setExpenseRows((rows) =>
-                rows
-                  ? [
-                      ...rows.filter((row) => row.expenseID !== expenseID),
-                      {
-                        ...saved,
-                        original: saved,
-                      },
-                    ]
-                  : undefined
-              )
-            )
-          },
-        } satisfies ButtonCellRendererProps<ExpenseRow>,
-        colId: 'save',
-        headerName: '',
-        minWidth: 80,
-        maxWidth: 80,
-        sortable: false,
-        valueGetter: ({ data }) => {
-          if (!data) {
-            return false
-          }
-          const { original, date, amount, note, expenseCategoryID, vendorID, paymentMethodID } = data
-          if (!(date && amount && expenseCategoryID && vendorID && paymentMethodID)) {
-            return false
-          }
-          return (
-            !original ||
-            date !== original.date ||
-            amount !== original.amount ||
-            note !== original.note ||
-            expenseCategoryID !== original.expenseCategoryID ||
-            vendorID !== original.vendorID ||
-            paymentMethodID !== original.paymentMethodID
-          )
-        },
-      } satisfies ColDef<ExpenseRow, boolean>,
-      {
-        cellRenderer: ButtonCellRenderer,
-        cellRendererParams: {
-          icon: 'delete',
-          danger: true,
-          clickedHandler: ({ data }: CustomCellRendererProps<ExpenseRow>) => {
-            const promise = data!.original ? deleteExpense.mutateAsync(data!.expenseID!) : Promise.resolve(void 0)
-            promise.then(() => setExpenseRows((rows) => rows?.filter((row) => row.expenseID !== data!.expenseID)))
-          },
-        } satisfies ButtonCellRendererProps<ExpenseRow>,
-        colId: 'delete',
-        headerName: '',
-        minWidth: 80,
-        maxWidth: 80,
-        sortable: false,
-        valueGetter: () => true,
-      } satisfies ColDef<ExpenseRow, boolean>,
+      }),
+      amountColumn<ExpenseRow>(),
+      noteColumn<ExpenseRow>(),
+      saveColumn<ExpenseRow>(
+        (row) => canSave(row, REQUIRED, COMPARED),
+        (row) =>
+          save(row, ({ original, expenseID, expenseCategoryID, vendorID, paymentMethodID, date, amount, note }) => {
+            const fields = { expenseCategoryID, vendorID, paymentMethodID, date, amount, note }
+            return original ? updateExpense({ expenseID, ...fields }) : createExpense({ expenseID: 0, ...fields })
+          })
+      ),
+      deleteColumn<ExpenseRow>((row) => remove(row, ({ expenseID }) => deleteExpense(expenseID!))),
     ],
-    [expenseCategoryIDToDisplayName, paymentMethodIDToDisplayName, vendorIDToDisplayName]
+    [expenseCategories, vendors, paymentMethods, createVendor, createExpense, updateExpense, deleteExpense, save, remove]
   )
-  const getRowId: GetRowIdFunc<ExpenseRow> = ({ data }) => `${data.expenseID}`
 
-  const addExpenseHandler = ({ expenseCategoryID, vendorID, paymentMethodID, amount }: ExpenseTemplate) => {
-    setExpenseRows((rows) =>
-      rows
-        ? [
-            ...rows,
-            {
-              expenseID: nextExpenseID,
-              expenseCategoryID: expenseCategoryID ?? undefined,
-              vendorID: vendorID ?? undefined,
-              paymentMethodID: paymentMethodID ?? undefined,
-              amount: amount ?? undefined,
-              date: undefined,
-              note: undefined,
-              original: undefined,
-            },
-          ]
-        : undefined
-    )
-    setNextExpenseID((id) => id - 1)
-  }
-
-  const rowData = expenseRows?.filter(({ original }) => original)
-  const pinnedTopRowData = expenseRows?.filter(({ original }) => !original)
+  const addExpenseRow = ({ expenseCategoryID, vendorID, paymentMethodID, amount }: ExpenseTemplate) =>
+    addDraft((expenseID) => ({
+      expenseID,
+      expenseCategoryID: expenseCategoryID ?? undefined,
+      vendorID: vendorID ?? undefined,
+      paymentMethodID: paymentMethodID ?? undefined,
+      amount: amount ?? undefined,
+    }))
 
   return (
-    <div className="budget-grid-container">
-      {!expenseCategories || !vendors || !paymentMethods ? (
-        <Spin size="large" />
-      ) : (
-        <>
-          <AddExpenseButtons disabled={!expenses} addExpenseRow={addExpenseHandler} />
-          <div className="ag-theme-quartz" style={{ flex: 1 }}>
-            <AgGridReact rowData={rowData} pinnedTopRowData={pinnedTopRowData} columnDefs={colDefs} getRowId={getRowId}></AgGridReact>
-          </div>
-        </>
-      )}
-    </div>
+    <BudgetGrid
+      loading={!expenseCategories || !vendors || !paymentMethods}
+      toolbar={<AddExpenseButtons disabled={!expenses} addExpenseRow={addExpenseRow} />}
+      rows={rows}
+      columnDefs={colDefs}
+      idOf={idOf}
+    />
   )
 }
 
