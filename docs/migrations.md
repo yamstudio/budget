@@ -37,7 +37,7 @@ Rules:
    ```
 2. Add the repository secret `PROD_DB_CONNECTION_STRING`: server, database, `Authentication=Active Directory Default;Encrypt=True`, and no password.
 3. Create the GitHub environment `production-migrations` with required reviewers (the owner). If you are the only reviewer, allow self-review. Without required reviewers the job runs without approval.
-4. Verify the first time with a real migration; the production path has not been run yet.
+4. Verify without changing anything: Actions, **Verify production DB access**, Run workflow, approve it. It lists applied and pending migrations read-only, which proves the approval gate, the environment secret, the Azure login and database read access. It cannot prove the DDL permission; that is only proven by the first real migration, so keep that one small and additive.
 
 ## Future
 Optional: a pre-migration database copy for risky changes (Basic tier supports `az sql db copy`).
