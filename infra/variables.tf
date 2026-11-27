@@ -28,12 +28,7 @@ variable "web_resource_group" {
   description = "Resource group holding the App Service plan and web app."
 }
 
-variable "sql_resource_group" {
-  type        = string
-  description = "Resource group holding the shared SQL server."
-}
-
 variable "sql_server_name" {
   type        = string
-  description = "Logical SQL server name. Kept out of the repo: the repo is public."
+  description = "Name of the SQL server dedicated to this app, in the web resource group. Kept out of the repo (public)."
 }

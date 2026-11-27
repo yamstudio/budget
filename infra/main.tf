@@ -3,10 +3,6 @@ data "azurerm_resource_group" "web" {
   name = var.web_resource_group
 }
 
-data "azurerm_resource_group" "sql" {
-  name = var.sql_resource_group
-}
-
 # --- Web app -----------------------------------------------------------------
 
 resource "azurerm_service_plan" "belfast" {
@@ -40,7 +36,7 @@ resource "azurerm_windows_web_app" "belfastweb" {
   connection_string {
     name  = "BudgetDbConnection"
     type  = "SQLAzure"
-    value = "Server=tcp:${azurerm_mssql_server.sql.fully_qualified_domain_name},1433;Initial Catalog=${azurerm_mssql_database.budget.name};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=\"Active Directory Default\";"
+    value = "Server=tcp:${azurerm_mssql_server.budget.fully_qualified_domain_name},1433;Initial Catalog=${azurerm_mssql_database.budget_db.name};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=\"Active Directory Default\";"
   }
 
   # The Entra sign-in is the only thing protecting an API that has no auth of its own.
@@ -118,12 +114,13 @@ resource "azurerm_windows_web_app" "belfastweb" {
   }
 }
 
-# --- SQL (shared server: other, non-public projects keep their own databases on it) -----
+# --- SQL: this app's own server and database -------------------------------------------------------
+# (Moved here from a server shared with other, non-public projects; see docs/sql-server-move.md.)
 
-resource "azurerm_mssql_server" "sql" {
+resource "azurerm_mssql_server" "budget" {
   name                = var.sql_server_name
-  resource_group_name = data.azurerm_resource_group.sql.name
-  location            = data.azurerm_resource_group.sql.location
+  resource_group_name = data.azurerm_resource_group.web.name
+  location            = data.azurerm_resource_group.web.location
   version             = "12.0"
 
   minimum_tls_version           = "1.2"
@@ -141,9 +138,18 @@ resource "azurerm_mssql_server" "sql" {
   }
 }
 
-resource "azurerm_mssql_database" "budget" {
+# Lets Azure services (the web app) reach the server. Client-IP rules and the per-run CI rule are
+# intentionally not declared here.
+resource "azurerm_mssql_firewall_rule" "budget_allow_azure_services" {
+  name             = "AllowAllWindowsAzureIps"
+  server_id        = azurerm_mssql_server.budget.id
+  start_ip_address = "0.0.0.0"
+  end_ip_address   = "0.0.0.0"
+}
+
+resource "azurerm_mssql_database" "budget_db" {
   name                 = "budget"
-  server_id            = azurerm_mssql_server.sql.id
+  server_id            = azurerm_mssql_server.budget.id
   sku_name             = "Basic"
   max_size_gb          = 2
   collation            = "SQL_Latin1_General_CP1_CI_AS"
@@ -153,13 +159,4 @@ resource "azurerm_mssql_database" "budget" {
   lifecycle {
     prevent_destroy = true
   }
-}
-
-# Lets Azure services (the web app) reach the server. Client-IP rules and the per-run
-# CI rule are managed elsewhere and intentionally not declared here.
-resource "azurerm_mssql_firewall_rule" "allow_azure_services" {
-  name             = "AllowAllWindowsAzureIps"
-  server_id        = azurerm_mssql_server.sql.id
-  start_ip_address = "0.0.0.0"
-  end_ip_address   = "0.0.0.0"
 }
