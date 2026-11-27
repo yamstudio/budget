@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
-import { Alert, Badge, Button, DatePicker, Empty, Grid, Modal, Segmented, Select, Spin, Table, Tabs, Typography } from 'antd'
-import dayjs from 'dayjs'
+import { Alert, Badge, Button, Empty, Grid, Modal, Select, Spin, Table, Tabs, Typography } from 'antd'
 import { useSearchParams } from 'react-router'
+import DateRangeControl from '../DateRangeControl'
+import { formatDate, resolveRange } from '../dateRange'
 import { ExpenseCategory, ExpenseGrouping, ExpenseNecessity, IncomeGrouping, PaymentMethod, Vendor } from '../gensrc/Api'
 import {
   useBudgetComparison,
@@ -27,16 +28,7 @@ import {
   totalsByLabel,
   trendsOption,
 } from './insightsCharts'
-import {
-  InsightsParams,
-  InsightsRange,
-  InsightsView,
-  activeFilterCount,
-  formatDate,
-  parseInsightsParams,
-  resolveRange,
-  toSearchParams,
-} from './insightsParams'
+import { InsightsParams, InsightsView, activeFilterCount, parseInsightsParams, toSearchParams } from './insightsParams'
 import { QueryClient } from '@tanstack/react-query'
 
 const GROUP_LABELS: Record<ExpenseGrouping, string> = {
@@ -89,26 +81,7 @@ const Insights = ({ queryClient }: InsightsProps) => {
   return (
     <div style={{ flex: 1, overflow: 'auto', padding: narrow ? 12 : 24, minWidth: 0 }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', marginBottom: 12 }}>
-        <Segmented<InsightsRange>
-          value={params.range}
-          onChange={(range) => update({ range, ...(range === 'custom' ? { from: formatDate(fromDate), to: formatDate(toDate) } : {}) })}
-          options={[
-            { value: '3m', label: '3M' },
-            { value: '6m', label: '6M' },
-            { value: '12m', label: '12M' },
-            { value: 'ytd', label: 'YTD' },
-            { value: 'custom', label: 'Custom' },
-          ]}
-        />
-        {params.range === 'custom' && (
-          <DatePicker.RangePicker
-            value={[dayjs(fromDate), dayjs(toDate)]}
-            allowClear={false}
-            onChange={(dates) =>
-              dates?.[0] && dates[1] && update({ from: dates[0].format('YYYY-MM-DD'), to: dates[1].format('YYYY-MM-DD') })
-            }
-          />
-        )}
+        <DateRangeControl value={params} resolved={{ fromDate, toDate }} onChange={update} />
         {!isBudget && (
           <Select
             aria-label="Group by"
