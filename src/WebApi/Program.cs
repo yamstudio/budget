@@ -35,7 +35,7 @@ app.UseHttpsRedirection();
 
 app.MapControllers();
 
-if (app.Environment.IsDevelopment())
+if (!app.Environment.IsProduction())
 {
     app.MapFallbackToFile("/index.html");
     app.UseDefaultFiles();
@@ -50,3 +50,6 @@ else
 }
 
 app.Run();
+
+// Exposes the entry point to the integration test project (WebApplicationFactory<Program>).
+public partial class Program;

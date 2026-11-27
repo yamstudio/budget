@@ -43,7 +43,7 @@ jobs:
         run: dotnet build --configuration Release
 
       - name: dotnet publish
-        run: dotnet publish -c Release --property:PublishDir=${PWD}/artifact
+        run: dotnet publish src/WebApi -c Release --property:PublishDir=${PWD}/artifact
       
       - name: Build UI
         run: npm --prefix src/UI ci && npm --prefix src/UI run build

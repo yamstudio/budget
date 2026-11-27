@@ -20,3 +20,7 @@ dotnet_analyzer_diagnostic.severity = none
 
 [src/UI/src/gensrc/**]
 generated_code = true
+
+[tests/**.cs]
+# Cancellation tokens add noise to short integration tests; not worth it here.
+dotnet_diagnostic.xUnit1051.severity = none
