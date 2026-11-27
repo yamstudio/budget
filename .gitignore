@@ -1,2 +1,6 @@
 artifact/
 *.lscache
+
+# build output (any project)
+**/bin/
+**/obj/
