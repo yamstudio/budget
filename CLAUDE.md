@@ -60,6 +60,13 @@ Claude cannot see a browser by default. Use `scripts/ui-screenshot.zsh <url> <Wx
 - Old code is not a style guide. Direction: add features, and improve where touched (add tests for new logic, tidy, add error handling). Avoid sweeping unrelated refactors.
 - C#: nullable enabled, implicit usings, root namespace `YamStudio.Budget.WebApi`.
 
+## Workflow (GitHub Actions) pitfalls, learned the hard way
+- Default `run` steps use `bash -e` without `pipefail`: `failing-command | tee` reports success. Use `shell: bash` and capture output (`out="$(cmd 2>&1)"`) instead of piping.
+- `dotnet ef` does not restore: run `dotnet restore src/WebApi` first on a fresh checkout.
+- `dotnet ef migrations list` swallows connection errors (warns, still lists, exits 0). Check its output for "An error occurred while accessing the database". `database update` does fail loudly.
+- A green workflow run is not proof the step did its job; assert on real output, and test the step script in a fresh clone (`git clone` to a scratch dir) including a deliberate failure.
+- The .NET SDK is pinned to the 10.0 band in `global.json` (the runner default moved to SDK 11); change it together with the target framework.
+
 ## Git workflow
 Branch off `master`, open a PR, squash-merge (confirmed; commit titles end with `(#N)`). Merging does not deploy; CI runs on the PR and again on `master`. Production deploys only on a published release tag (`docs/releasing.md`). Claude never creates tags or releases and never runs the deploy workflow, and does not merge without the user's say-so. Commit messages: short imperative summary.
 
