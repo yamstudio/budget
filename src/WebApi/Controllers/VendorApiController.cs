@@ -57,6 +57,11 @@ public class VendorApiController : ControllerBase
         {
             return NotFound();
         }
+        // The database cascades deletes, so removing a row that is still referenced would silently delete those rows too.
+        if (await _context.Expenses.AnyAsync(e => e.VendorID == vendorId))
+        {
+            return Conflict("Cannot delete a vendor that is still used by expenses.");
+        }
         _context.Remove(vendorToDelete);
         await _context.SaveChangesAsync();
         return vendorToDelete;

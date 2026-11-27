@@ -58,6 +58,11 @@ public class ExpenseCategoryApiController : ControllerBase
         {
             return NotFound();
         }
+        // The database cascades deletes, so removing a row that is still referenced would silently delete those rows too.
+        if (await _context.Expenses.AnyAsync(e => e.ExpenseCategoryID == expenseCategoryId) || await _context.Budgets.AnyAsync(b => b.ExpenseCategoryID == expenseCategoryId))
+        {
+            return Conflict("Cannot delete an expense category that is still used by expenses or budgets.");
+        }
         _context.Remove(expenseCategoryToDelete);
         await _context.SaveChangesAsync();
         return expenseCategoryToDelete;

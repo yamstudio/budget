@@ -57,6 +57,11 @@ public class PaymentMethodApiController : ControllerBase
         {
             return NotFound();
         }
+        // The database cascades deletes, so removing a row that is still referenced would silently delete those rows too.
+        if (await _context.Expenses.AnyAsync(e => e.PaymentMethodID == paymentMethodId))
+        {
+            return Conflict("Cannot delete a payment method that is still used by expenses.");
+        }
         _context.Remove(paymentMethodToDelete);
         await _context.SaveChangesAsync();
         return paymentMethodToDelete;
